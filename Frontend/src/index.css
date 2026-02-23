@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset simple */
+html, body, #root {
+  height: 100%;
+}
+
+/* Masque la scrollbar tout en gardant le scroll vertical actif */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE 10+ */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari, Opera */
+}
