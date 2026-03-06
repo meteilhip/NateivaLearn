@@ -1,114 +1,41 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "../../../shared/ui/Button";
 import { useTranslation } from "react-i18next";
-import { FaVideo } from "react-icons/fa";
+import { FaVideo, FaLink } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { Input } from "../../../shared/ui/Input";
 
-/** StepTutorVideo – Étape où le tuteur ajoute une vidéo de présentation */
-export default function StepTutorVideo({ data, setData, onNext, onBack }) {
-  const [videoFile, setVideoFile] = useState(data.tutorVideo || null);
-  const [videoURL, setVideoURL] = useState(
-    data.tutorVideo ? URL.createObjectURL(data.tutorVideo) : null
-  );
-
-  const [isRecording, setIsRecording] = useState(false);
-  const [stream, setStream] = useState(null);
-  const mediaRecorderRef = useRef(null);
-  const recordedChunksRef = useRef([]);
-  const videoRef = useRef(null);
-
+/**
+ * StepTutorVideo – Étape où le tuteur fournit un lien vidéo (YouTube, Loom, etc.)
+ * plutôt qu'un upload de fichier lourd.
+ */
+export default function StepTutorVideo({ data, setData, onNext, onBack, onSkip }) {
   const { t } = useTranslation();
+  const [videoUrl, setVideoUrl] = useState(data.tutorVideo ?? "");
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setVideoFile(file);
-      const url = URL.createObjectURL(file);
-      setVideoURL(url);
-      setData((prev) => ({ ...prev, tutorVideo: file }));
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-        videoRef.current.src = url;
-      }
-
-      toast.success("Vidéo sélectionnée !");
-    }
-  };
-
-  const startRecording = async () => {
+  const isValidUrl = (value) => {
+    if (!value) return false;
     try {
-      const userStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-
-      setStream(userStream);
-      recordedChunksRef.current = [];
-
-      mediaRecorderRef.current = new MediaRecorder(userStream);
-      mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) recordedChunksRef.current.push(e.data);
-      };
-
-      mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
-        const file = new File([blob], "presentation.webm", { type: "video/webm" });
-
-        setVideoFile(file);
-        const url = URL.createObjectURL(file);
-        setVideoURL(url);
-        setData((prev) => ({ ...prev, tutorVideo: file }));
-
-        userStream.getTracks().forEach((track) => track.stop());
-        setStream(null);
-        setIsRecording(false);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = null;
-          videoRef.current.src = url;
-          videoRef.current.controls = true;
-          videoRef.current.play();
-        }
-
-        toast.success("Enregistrement terminé et vidéo uploadée !");
-      };
-
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = userStream;
-        videoRef.current.controls = false;
-        videoRef.current.play();
-      }
-
-      toast.info("Enregistrement en cours...");
-    } catch (err) {
-      console.error(err);
-      toast.error("Impossible d'accéder à la caméra");
+      const url = new URL(value.trim());
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-    }
+  const handleChange = (e) => {
+    const value = e.target.value;
+    setVideoUrl(value);
+    setData((prev) => ({ ...prev, tutorVideo: value }));
   };
 
   const handleNext = () => {
-    if (!videoFile) return toast.error("Veuillez ajouter une vidéo !");
+    if (!videoUrl || !isValidUrl(videoUrl)) {
+      return toast.error("Veuillez saisir un lien vidéo valide (YouTube, Loom, etc.)");
+    }
     onNext();
   };
-
-  useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, [stream]);
 
   return (
     <motion.div
@@ -125,57 +52,46 @@ export default function StepTutorVideo({ data, setData, onNext, onBack }) {
       </h1>
 
       <p className="text-black/70 text-lg">
-        Vous pouvez sélectionner une vidéo ou utiliser votre caméra pour vous présenter.
+        Collez un lien vers une courte vidéo de présentation (YouTube, Loom, Drive...).
       </p>
 
-      <video
-        ref={videoRef}
-        src={!isRecording ? videoURL : undefined}
-        controls={!isRecording}
-        className="w-full max-h-80 rounded-lg border bg-black"
-        autoPlay={isRecording}
-      />
-
-      <div className="flex gap-4 mt-4">
-        <label
-          htmlFor="videoUpload"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg cursor-pointer hover:bg-primary/90 transition font-medium shadow-md flex-1 justify-center"
-        >
-          <FaVideo size={20} />
-          {videoFile ? "Changer la vidéo" : "Sélectionner une vidéo"}
-        </label>
-        <input
-          id="videoUpload"
-          type="file"
-          accept="video/*"
-          onChange={handleFileChange}
-          className="hidden"
+      <div className="space-y-3">
+        <Input
+          type="url"
+          placeholder="https://youtube.com/..."
+          value={videoUrl}
+          onChange={handleChange}
+          icon={FaLink}
         />
-
-        {!isRecording ? (
-          <Button
-            onClick={startRecording}
-            className="bg-green-500 hover:bg-green-600 text-white rounded flex-1"
-          >
-            Démarrer la caméra
-          </Button>
-        ) : (
-          <Button
-            onClick={stopRecording}
-            className="bg-red-500 hover:bg-red-600 text-white rounded flex-1"
-          >
-            Arrêter l'enregistrement
-          </Button>
+        {videoUrl && isValidUrl(videoUrl) && (
+          <div className="rounded-lg border p-3 bg-black/5 text-sm break-all">
+            <span className="font-semibold mr-2">Lien actuel :</span>
+            <a
+              href={videoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary underline"
+            >
+              {videoUrl}
+            </a>
+          </div>
         )}
       </div>
 
-      <div className="flex justify-between mt-6">
-        <Button variant="outline" onClick={onBack} className="rounded">
-          ← {t("signup.back")}
-        </Button>
-        <Button onClick={handleNext} disabled={!videoFile} className="rounded">
-          {t("signup.continue")}
-        </Button>
+      <div className="flex flex-col gap-3 mt-6">
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={onBack} className="rounded">
+            ← {t("signup.back")}
+          </Button>
+          <Button onClick={handleNext} disabled={!videoUrl} className="rounded">
+            {t("signup.continue")}
+          </Button>
+        </div>
+        {onSkip && (
+          <Button variant="outline" onClick={onSkip} className="rounded w-full text-black/60">
+            {t("signup.skip")}
+          </Button>
+        )}
       </div>
     </motion.div>
   );

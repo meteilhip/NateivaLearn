@@ -659,7 +659,4 @@ Les éléments suivants sont présents dans le code mais ne sont **pas complète
   - `useIsTutor`, `useIsCenterOwner`, `usePermissions` :
     - Définis comme abstraction pour les rôles/permissions.
     - Aucun composant majeur ne les utilise encore (la logique est dupliquée ailleurs pour l’instant).
-
-Voici une version **simplifiée, claire et compréhensible pour un non-développeur** 👇
-
 ---

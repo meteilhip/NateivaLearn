@@ -63,7 +63,6 @@ export default function Step1CityAndNumber({ data, setData, onNext, onBack }) {
         <Button variant="outline" onClick={onBack} className="rounded">
           ← {t("signup.back")}
         </Button>
-
         <Button variant="primary" onClick={onNext} className="rounded">
           {t("signup.continue")}
         </Button>

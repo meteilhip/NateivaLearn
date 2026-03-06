@@ -1,18 +1,29 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { FaCheck, FaEye, FaEyeSlash } from "react-icons/fa";
 import { useAuthStore } from "../../../app/store/auth.store";
+import { useOrganizationsStore } from "../../../app/store/organizations.store";
 import { useActiveOrganization } from "../../../shared/hooks/useActiveOrganization";
 import { ProfileField } from "../../../shared/ui/ProfileField";
 import { SubjectsSection } from "../../../shared/components/SubjectsSection";
+import { LanguagesSection } from "../../../shared/components/LanguagesSection";
 
 export function CenterOwnerProfile() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const updateProfile = useAuthStore((s) => s.updateProfile);
-  const { activeOrganization } = useActiveOrganization();
+  const { activeOrganization, activeOrganizationId } = useActiveOrganization();
+  const fetchOrganizations = useOrganizationsStore((s) => s.fetchOrganizations);
+  const updateOrganization = useOrganizationsStore((s) => s.updateOrganization);
+
   const [name, setName] = useState(user?.name || "");
+  const [bio, setBio] = useState(user?.tutorProfile?.bio || "");
+  const [pricePerHour, setPricePerHour] = useState(
+    user?.tutorProfile?.hourly_rate != null ? String(user.tutorProfile.hourly_rate) : ""
+  );
+  const [subjects, setSubjects] = useState(user?.tutorProfile?.subjects || []);
+  const [videoUrl, setVideoUrl] = useState(user?.tutorProfile?.video_url || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -20,10 +31,111 @@ export function CenterOwnerProfile() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const centerLanguagesRaw = activeOrganization?.required_languages ?? activeOrganization?.requiredLanguages;
   const [centerName, setCenterName] = useState(activeOrganization?.name || "");
+  const [centerDescription, setCenterDescription] = useState(activeOrganization?.description || "");
   const [centerSubjects, setCenterSubjects] = useState(activeOrganization?.subjects || []);
-  const [centerLanguages, setCenterLanguages] = useState(activeOrganization?.languages?.join(", ") || "");
+  const [centerLanguagesList, setCenterLanguagesList] = useState(
+    Array.isArray(centerLanguagesRaw)
+      ? centerLanguagesRaw
+      : centerLanguagesRaw
+      ? String(centerLanguagesRaw)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : []
+  );
   const fileInputRef = useRef(null);
+  const centerLogoInputRef = useRef(null);
+
+  const displayLanguages = useMemo(() => {
+    if (!user?.tutorProfile?.languages) return "";
+    if (Array.isArray(user.tutorProfile.languages)) {
+      return user.tutorProfile.languages.join(", ");
+    }
+    return String(user.tutorProfile.languages);
+  }, [user?.tutorProfile]);
+
+  const embed = useMemo(() => {
+    if (!videoUrl) return null;
+    try {
+      const url = new URL(videoUrl);
+      const hostname = url.hostname.toLowerCase();
+
+      if (hostname === "youtu.be") {
+        const id = url.pathname.replace("/", "");
+        if (!id) return null;
+        return { url: `https://www.youtube.com/embed/${id}`, platform: "youtube" };
+      }
+      if (hostname.includes("youtube.com")) {
+        const v = url.searchParams.get("v");
+        if (v) {
+          return { url: `https://www.youtube.com/embed/${v}`, platform: "youtube" };
+        }
+        if (url.pathname.includes("/embed/")) {
+          return { url: videoUrl, platform: "youtube" };
+        }
+        return { url: videoUrl, platform: "youtube" };
+      }
+
+      if (hostname.includes("tiktok.com")) {
+        const segments = url.pathname.split("/").filter(Boolean);
+        const videoIndex = segments.findIndex((s) => s === "video");
+        if (videoIndex !== -1 && segments[videoIndex + 1]) {
+          const id = segments[videoIndex + 1];
+          return { url: `https://www.tiktok.com/embed/v2/${id}`, platform: "tiktok" };
+        }
+        return { url: videoUrl, platform: "tiktok" };
+      }
+
+      if (hostname.includes("instagram.com")) {
+        const segments = url.pathname.split("/").filter(Boolean);
+        const typeIndex = segments.findIndex((s) => ["p", "reel", "tv"].includes(s));
+        if (typeIndex !== -1 && segments[typeIndex + 1]) {
+          const type = segments[typeIndex];
+          const code = segments[typeIndex + 1];
+          return { url: `https://www.instagram.com/${type}/${code}/embed`, platform: "instagram" };
+        }
+        return { url: videoUrl, platform: "instagram" };
+      }
+
+      if (hostname.includes("facebook.com")) {
+        const encoded = encodeURIComponent(videoUrl);
+        return {
+          url: `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false`,
+          platform: "facebook",
+        };
+      }
+
+      return { url: videoUrl, platform: "other" };
+    } catch {
+      return null;
+    }
+  }, [videoUrl]);
+
+  useEffect(() => {
+    fetchOrganizations?.();
+  }, [fetchOrganizations]);
+
+  useEffect(() => {
+    if (!activeOrganization) return;
+    setCenterName(activeOrganization.name || "");
+    setCenterDescription(activeOrganization.description || "");
+    setCenterSubjects(Array.isArray(activeOrganization.subjects) ? activeOrganization.subjects : []);
+    const lang = activeOrganization.required_languages ?? activeOrganization.requiredLanguages;
+    setCenterLanguagesList(
+      Array.isArray(lang)
+        ? lang
+        : lang
+        ? String(lang)
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : []
+    );
+  }, [activeOrganization]);
+
+  const centerLogo = activeOrganization?.logo ?? null;
 
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0];
@@ -35,6 +147,14 @@ export function CenterOwnerProfile() {
 
   const handleConfirmName = () => {
     if (name.trim()) updateProfile({ name: name.trim() });
+  };
+
+  const handleConfirmBio = () => {
+    updateProfile({ bio: bio.trim() });
+  };
+
+  const handleConfirmVideo = () => {
+    updateProfile({ video_url: videoUrl || null });
   };
 
   const handleConfirmPassword = () => {
@@ -57,8 +177,41 @@ export function CenterOwnerProfile() {
     newPassword.length > 0 &&
     newPassword === confirmPassword;
 
+  const handleSaveCenterName = () => {
+    if (!activeOrganizationId || !centerName.trim()) return;
+    updateOrganization(activeOrganizationId, { name: centerName.trim() }).catch(() => {});
+  };
+
+  const handleSaveCenterDescription = () => {
+    if (!activeOrganizationId) return;
+    updateOrganization(activeOrganizationId, { description: centerDescription.trim() || null }).catch(() => {});
+  };
+
+  const handleSaveCenterSubjects = (nextSubjects) => {
+    setCenterSubjects(nextSubjects);
+    if (!activeOrganizationId) return;
+    updateOrganization(activeOrganizationId, { subjects: nextSubjects }).catch(() => {});
+  };
+
+  const handleSaveCenterLanguages = (nextLanguages) => {
+    setCenterLanguagesList(nextLanguages);
+    if (!activeOrganizationId) return;
+    updateOrganization(activeOrganizationId, { required_languages: nextLanguages }).catch(() => {});
+  };
+
+  const handleCenterLogoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeOrganizationId) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateOrganization(activeOrganizationId, { logo: reader.result }).catch(() => {});
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   return (
-    <div className="min-h-[calc(100vh-6rem)] flex flex-col">
+    <div className="min-h-[calc(100vh-6rem)] flex flex-col gap-6">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -85,6 +238,7 @@ export function CenterOwnerProfile() {
 
         <div className="flex-1 p-6 md:p-8 flex flex-col justify-center min-w-0">
           <div className="max-w-lg">
+            <h3 className="text-sm font-semibold text-dark/60 uppercase tracking-wider mb-2">{t("settings.account")}</h3>
             <ProfileField label={t("profilePage.name")} value={name} onChange={setName} onConfirm={handleConfirmName} />
             <ProfileField label={t("profilePage.email")} value={user?.email || ""} readOnly />
             <ProfileField label={t("profilePage.phone")} value={user?.phone || ""} readOnly />
@@ -140,45 +294,142 @@ export function CenterOwnerProfile() {
         </div>
       </motion.div>
 
-      {/* Section Mon Centre */}
+      {/* Section Mon centre */}
       {activeOrganization && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl shadow-sm overflow-hidden p-6 md:p-8 mt-6"
+          transition={{ delay: 0.05 }}
+          className="bg-white rounded-2xl shadow-sm overflow-hidden p-6 md:p-8"
         >
-          <h3 className="text-sm font-semibold text-dark/60 uppercase tracking-wider mb-4">
-            {t("centerOwner.myCenter", "Mon centre")}
+          <h3 className="text-sm font-semibold text-dark/60 uppercase tracking-wider">
+            {t("centerOwner.myCenter")}
           </h3>
+          <p className="text-xs text-dark/50 mt-1 mb-4">
+            {t("centerOwner.myCenterSubtitle")}
+          </p>
           <div className="max-w-2xl space-y-6">
+            {/* Logo du centre */}
+            <div className="py-4 border-b border-black/5 flex flex-wrap items-center gap-4">
+              <span className="text-dark/60 text-sm font-medium min-w-[140px]">{t("centerOwner.centerLogo")}</span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => centerLogoInputRef.current?.click()}
+                  className="relative group rounded-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary/40 w-24 h-24 bg-black/5 flex items-center justify-center"
+                >
+                  {centerLogo ? (
+                    <img src={centerLogo} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-dark/40 text-4xl">+</span>
+                  )}
+                  <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-medium px-2 text-center">
+                    {t("centerOwner.changeCenterLogo")}
+                  </span>
+                </button>
+                <input
+                  ref={centerLogoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCenterLogoChange}
+                />
+              </div>
+            </div>
             <ProfileField
-              label={t("centerOwner.centerName", "Nom du centre")}
+              label={t("centerOwner.centerName")}
               value={centerName}
               onChange={setCenterName}
-              onConfirm={() => {
-                // TODO: Sauvegarder le nom du centre
-              }}
+              onConfirm={handleSaveCenterName}
             />
-            
-            {/* Matières enseignées */}
-            <div className="py-4 border-b border-black/5">
-              <SubjectsSection subjects={centerSubjects} onChange={setCenterSubjects} />
-            </div>
-
-            {/* Langues parlées exigées */}
             <ProfileField
-              label={t("centerOwner.requiredLanguages", "Langues parlées exigées")}
-              value={centerLanguages}
-              onChange={setCenterLanguages}
-              onConfirm={() => {
-                // TODO: Sauvegarder les langues
+              label={t("center_owner.orgDescription")}
+              value={centerDescription}
+              onChange={setCenterDescription}
+              onConfirm={handleSaveCenterDescription}
+              multiline
+              placeholder={t("center_owner.orgDescription")}
+            />
+            <div className="py-4 border-b border-black/5">
+              <SubjectsSection subjects={centerSubjects} onChange={handleSaveCenterSubjects} />
+            </div>
+            <div className="py-4 border-b border-black/5">
+              <LanguagesSection languages={centerLanguagesList} onChange={handleSaveCenterLanguages} />
+            </div>
+          </div>
+    </motion.div>
+      )}
+
+      {/* Section Mon profil public (centre owner en tant que tuteur) */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-white rounded-2xl shadow-sm overflow-hidden p-6 md:p-8"
+      >
+        <h3 className="text-sm font-semibold text-dark/60 uppercase tracking-wider">
+          {t("teacherPages.profileTitle")}
+        </h3>
+        <p className="text-xs text-dark/50 mt-1 mb-4">
+          {t("teacherPages.profileSubtitle")}
+        </p>
+        <div className="max-w-2xl space-y-6">
+          <ProfileField
+            label={t("teacherPages.bio")}
+            value={bio}
+            onChange={setBio}
+            onConfirm={handleConfirmBio}
+            multiline
+          />
+
+          <div className="py-4 border-b border-black/5">
+            <SubjectsSection
+              subjects={subjects}
+              onChange={(nextSubjects) => {
+                setSubjects(nextSubjects);
+                updateProfile({ subjects: nextSubjects });
               }}
-              placeholder="Français, Anglais, Espagnol"
             />
           </div>
-        </motion.div>
-      )}
+
+          <ProfileField
+            label={`${t("teacherPages.pricePerHour")} ($ / ${t("courses.hour")})`}
+            value={pricePerHour}
+            onChange={setPricePerHour}
+            onConfirm={() => {
+              const parsed = parseFloat(pricePerHour.replace(",", "."));
+              updateProfile({
+                hourly_rate: Number.isFinite(parsed) ? parsed : null,
+              });
+            }}
+          />
+          <ProfileField label={t("tutor.languages")} value={displayLanguages} readOnly />
+          <ProfileField
+            label={t("teacherPages.videoUrl")}
+            value={videoUrl}
+            onChange={setVideoUrl}
+            onConfirm={handleConfirmVideo}
+            placeholder="https://..."
+          />
+          {embed && (
+            <div
+              className={
+                embed.platform === "tiktok" || embed.platform === "instagram"
+                  ? "mt-4 w-full max-w-xs aspect-[9/16]"
+                  : "mt-4 w-full max-w-xl aspect-video"
+              }
+            >
+              <iframe
+                src={embed.url}
+                title="Tutor video"
+                className="w-full h-full rounded-xl border border-black/5"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 }

@@ -8,7 +8,11 @@ import { useCoursesStore } from "../../../app/store/courses.store";
 import { BookingStatusBadge } from "../../../shared/ui/BookingStatusBadge";
 import { Button } from "../../../shared/ui/Button";
 
-/** TutorCalendar - Agenda tuteur (mock). */
+/**
+ * TutorCalendar - Agenda tuteur.
+ * Affiche les réservations réelles du tuteur depuis la BD
+ * et les regroupe par semaine/jour.
+ */
 export const TutorCalendar = () => {
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { FaCheck, FaEye, FaEyeSlash } from "react-icons/fa";
@@ -19,11 +19,17 @@ export const TutorProfile = () => {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [passwordError, setPasswordError] = useState("");
-  const [bio, setBio] = useState("Enseignant passionné, pédagogie adaptée à chaque élève.");
-  const [pricePerHour, setPricePerHour] = useState("5000");
-  const [languages, setLanguages] = useState("Français, Anglais");
-  const [subjects, setSubjects] = useState(["Mathématiques", "Physique"]);
-  const [videoUrl, setVideoUrl] = useState("");
+  const [bio, setBio] = useState(user?.tutorProfile?.bio || "");
+  const [pricePerHour, setPricePerHour] = useState(
+    user?.tutorProfile?.hourly_rate != null ? String(user.tutorProfile.hourly_rate) : ""
+  );
+  const [languages, setLanguages] = useState(
+    Array.isArray(user?.tutorProfile?.languages)
+      ? user.tutorProfile.languages.join(", ")
+      : user?.tutorProfile?.languages || ""
+  );
+  const [subjects, setSubjects] = useState(user?.tutorProfile?.subjects || []);
+  const [videoUrl, setVideoUrl] = useState(user?.tutorProfile?.video_url || "");
   const fileInputRef = useRef(null);
 
   const handlePhotoChange = (e) => {
@@ -37,6 +43,85 @@ export const TutorProfile = () => {
   const handleConfirmName = () => {
     if (name.trim()) updateProfile({ name: name.trim() });
   };
+
+  const handleConfirmBio = () => {
+    updateProfile({ bio: bio.trim() });
+  };
+
+  const handleConfirmVideo = () => {
+    updateProfile({ video_url: videoUrl || null });
+  };
+
+  const displayLanguages = useMemo(() => {
+    if (!user?.tutorProfile?.languages) return "";
+    if (Array.isArray(user.tutorProfile.languages)) {
+      return user.tutorProfile.languages.join(", ");
+    }
+    return String(user.tutorProfile.languages);
+  }, [user?.tutorProfile]);
+
+  const embed = useMemo(() => {
+    if (!videoUrl) return null;
+    try {
+      const url = new URL(videoUrl);
+      const hostname = url.hostname.toLowerCase();
+
+      // YouTube (formats courts et classiques)
+      if (hostname === "youtu.be") {
+        const id = url.pathname.replace("/", "");
+        if (!id) return null;
+        return { url: `https://www.youtube.com/embed/${id}`, platform: "youtube" };
+      }
+      if (hostname.includes("youtube.com")) {
+        const v = url.searchParams.get("v");
+        if (v) {
+          return { url: `https://www.youtube.com/embed/${v}`, platform: "youtube" };
+        }
+        // Si c'est déjà un embed
+        if (url.pathname.includes("/embed/")) {
+          return { url: videoUrl, platform: "youtube" };
+        }
+        return { url: videoUrl, platform: "youtube" };
+      }
+
+      // TikTok : on convertit /@user/video/ID en URL d'embed (vidéos majoritairement verticales)
+      if (hostname.includes("tiktok.com")) {
+        const segments = url.pathname.split("/").filter(Boolean);
+        const videoIndex = segments.findIndex((s) => s === "video");
+        if (videoIndex !== -1 && segments[videoIndex + 1]) {
+          const id = segments[videoIndex + 1];
+          return { url: `https://www.tiktok.com/embed/v2/${id}`, platform: "tiktok" };
+        }
+        return { url: videoUrl, platform: "tiktok" };
+      }
+
+      // Instagram : posts, reels, TV → URL d'embed (souvent vertical)
+      if (hostname.includes("instagram.com")) {
+        const segments = url.pathname.split("/").filter(Boolean);
+        const typeIndex = segments.findIndex((s) => ["p", "reel", "tv"].includes(s));
+        if (typeIndex !== -1 && segments[typeIndex + 1]) {
+          const type = segments[typeIndex];
+          const code = segments[typeIndex + 1];
+          return { url: `https://www.instagram.com/${type}/${code}/embed`, platform: "instagram" };
+        }
+        return { url: videoUrl, platform: "instagram" };
+      }
+
+      // Facebook : on passe par le plugin vidéo officiel (plutôt horizontal)
+      if (hostname.includes("facebook.com")) {
+        const encoded = encodeURIComponent(videoUrl);
+        return {
+          url: `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false`,
+          platform: "facebook",
+        };
+      }
+
+      // LinkedIn et autres : on tente un embed direct sur l'URL donnée
+      return { url: videoUrl, platform: "other" };
+    } catch {
+      return null;
+    }
+  }, [videoUrl]);
 
   const handleConfirmPassword = () => {
     setPasswordError("");
@@ -150,29 +235,72 @@ export const TutorProfile = () => {
         transition={{ delay: 0.05 }}
         className="bg-white rounded-2xl shadow-sm overflow-hidden p-6 md:p-8"
       >
-        <h3 className="text-sm font-semibold text-dark/60 uppercase tracking-wider mb-4">{t("teacherPages.profileTitle")}</h3>
+        <h3 className="text-sm font-semibold text-dark/60 uppercase tracking-wider">
+          {t("teacherPages.profileTitle")}
+        </h3>
+        <p className="text-xs text-dark/50 mt-1 mb-4">
+          {t("teacherPages.profileSubtitle")}
+        </p>
         <div className="max-w-2xl space-y-6">
-          <ProfileField label={t("teacherPages.bio")} value={bio} onChange={setBio} onConfirm={() => {}} multiline />
+          <ProfileField
+            label={t("teacherPages.bio")}
+            value={bio}
+            onChange={setBio}
+            onConfirm={handleConfirmBio}
+            multiline
+          />
           
           {/* Section Matières enseignées */}
           <div className="py-4 border-b border-black/5">
-            <SubjectsSection subjects={subjects} onChange={setSubjects} />
+            <SubjectsSection
+              subjects={subjects}
+              onChange={(nextSubjects) => {
+                setSubjects(nextSubjects);
+                updateProfile({ subjects: nextSubjects });
+              }}
+            />
           </div>
 
           <ProfileField
             label={`${t("teacherPages.pricePerHour")} ($ / ${t("courses.hour")})`}
             value={pricePerHour}
             onChange={setPricePerHour}
-            onConfirm={() => {}}
+            onConfirm={() => {
+              const parsed = parseFloat(pricePerHour.replace(",", "."));
+              updateProfile({
+                hourly_rate: Number.isFinite(parsed) ? parsed : null,
+              });
+            }}
           />
-          <ProfileField label={t("tutor.languages")} value={languages} onChange={setLanguages} onConfirm={() => {}} />
+          <ProfileField
+            label={t("tutor.languages")}
+            value={displayLanguages}
+            readOnly
+          />
           <ProfileField
             label={t("teacherPages.videoUrl")}
             value={videoUrl}
             onChange={setVideoUrl}
-            onConfirm={() => {}}
+            onConfirm={handleConfirmVideo}
             placeholder="https://..."
           />
+          {embed && (
+            <div
+              className={
+                embed.platform === "tiktok" || embed.platform === "instagram"
+                  ? "mt-4 w-full max-w-xs aspect-[9/16]"
+                  : "mt-4 w-full max-w-xl aspect-video"
+              }
+            >
+              <iframe
+                src={embed.url}
+                title="Tutor video"
+                className="w-full h-full rounded-xl border border-black/5"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          )}
         </div>
       </motion.div>
     </div>

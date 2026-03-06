@@ -1,147 +1,105 @@
 // src/app/store/chat.store.js
 import { create } from "zustand";
+import { chatService } from "../../services";
 
-/**
- * Chat Store (mock)
- * -----------------
- * Simule : conversations, messages, badge unread, statut online.
- * Préparé pour futur WebSocket (remplacer addMessage par émission socket).
- */
-
-const MOCK_CONVERSATIONS = [
-  {
-    id: "c1",
-    participant: {
-      id: "t1",
-      name: "Marie Dupont",
-      avatar: "/teacher-new.png",
-      role: "teacher",
-    },
-    lastMessage: {
-      text: "Parfait, à jeudi 10h pour le cours de maths !",
-      sentAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      fromMe: false,
-    },
-    unreadCount: 2,
-    isOnline: true,
-  },
-  {
-    id: "c2",
-    participant: {
-      id: "t2",
-      name: "Jean Martin",
-      avatar: "/teacher-new.png",
-      role: "teacher",
-    },
-    lastMessage: {
-      text: "Merci pour votre message.",
-      sentAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      fromMe: true,
-    },
-    unreadCount: 0,
+function mapConversation(c) {
+  const participant = c.participant ?? c.participants?.[0];
+  return {
+    id: c.id,
+    name: participant?.name,
+    avatar: null,
     isOnline: false,
-  },
-];
+    unreadCount: c.unread_count ?? c.unreadCount ?? 0,
+    lastMessage: c.last_message
+      ? {
+          text: c.last_message.text ?? c.last_message.message,
+          timestamp: c.last_message.sent_at ?? c.last_message.timestamp,
+        }
+      : null,
+    participant: participant
+      ? { id: participant.id, name: participant.name, avatar: null, role: "teacher" }
+      : null,
+  };
+}
 
-const MOCK_MESSAGES = {
-  c1: [
-    { id: "m1", text: "Bonjour, je souhaite réserver un créneau pour les maths.", sentAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), fromMe: true },
-    { id: "m2", text: "Bonjour ! Oui, j'ai des dispos jeudi ou vendredi matin.", sentAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), fromMe: false },
-    { id: "m3", text: "Jeudi 10h me convient.", sentAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), fromMe: true },
-    { id: "m4", text: "Parfait, à jeudi 10h pour le cours de maths !", sentAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), fromMe: false },
-  ],
-  c2: [
-    { id: "m5", text: "Bonjour, avez-vous des créneaux en anglais cette semaine ?", sentAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(), fromMe: true },
-    { id: "m6", text: "Merci pour votre message.", sentAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), fromMe: true },
-  ],
-};
+function mapMessage(m) {
+  return {
+    id: m.id,
+    text: m.text ?? m.message,
+    sentAt: m.timestamp ?? m.sent_at ?? m.created_at,
+    fromMe: m.from_me ?? m.fromMe,
+  };
+}
 
 export const useChatStore = create((set, get) => ({
-  conversations: MOCK_CONVERSATIONS.map((c) => ({
-    id: c.id,
-    name: c.participant.name,
-    avatar: c.participant.avatar,
-    isOnline: c.isOnline,
-    unreadCount: c.unreadCount,
-    lastMessage: c.lastMessage ? {
-      text: c.lastMessage.text,
-      timestamp: c.lastMessage.sentAt,
-    } : null,
-    participant: c.participant,
-  })),
-  messagesByConversationId: MOCK_MESSAGES,
-
-  /** Obtenir tous les messages formatés */
-  get messages() {
-    const allMessages = [];
-    Object.keys(get().messagesByConversationId).forEach((convId) => {
-      const convMessages = get().messagesByConversationId[convId];
-      convMessages.forEach((msg) => {
-        allMessages.push({
-          id: msg.id,
-          conversationId: convId,
-          senderId: msg.fromMe ? "current-user" : get().conversations.find((c) => c.id === convId)?.participant?.id || "unknown",
-          text: msg.text,
-          timestamp: msg.sentAt,
-        });
-      });
-    });
-    return allMessages;
-  },
-
-  /** Sélectionner une conversation (pour afficher les messages) */
+  conversations: [],
+  messagesByConversationId: {},
   selectedConversationId: null,
-  setSelectedConversationId: (id) => {
-    set({ selectedConversationId: id });
-    // Marquer comme lu
-    if (id) {
-      get().markAsRead(id);
+
+  fetchConversations: async () => {
+    try {
+      const data = await chatService.getConversations();
+      const list = (data ?? []).map(mapConversation);
+      set({ conversations: list });
+      return list;
+    } catch {
+      set({ conversations: [] });
+      return [];
     }
   },
 
-  /** Messages de la conversation sélectionnée */
   getMessages: (conversationId) => {
-    const rawMessages = get().messagesByConversationId[conversationId] || [];
-    const participantId = get().conversations.find((c) => c.id === conversationId)?.participant?.id || "unknown";
-    return rawMessages.map((msg) => ({
-      id: msg.id,
-      conversationId,
-      senderId: msg.fromMe ? "current-user" : participantId,
-      text: msg.text,
-      timestamp: msg.sentAt,
-    }));
+    return get().messagesByConversationId[conversationId] ?? [];
   },
 
-  /** Envoyer un message (mock ; plus tard WebSocket) */
-  sendMessage: (conversationId, text) => {
-    const user = get().currentUserId || "current-user";
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      text,
-      sentAt: new Date().toISOString(),
-      fromMe: true,
-    };
-    set((state) => {
-      const prev = state.messagesByConversationId[conversationId] || [];
-      return {
+  fetchMessagesForConversation: async (conversationId) => {
+    try {
+      const data = await chatService.getMessages(conversationId);
+      const list = (data ?? []).map(mapMessage);
+      set((state) => ({
         messagesByConversationId: {
           ...state.messagesByConversationId,
-          [conversationId]: [...prev, newMsg],
+          [conversationId]: list,
         },
-        conversations: state.conversations.map((c) =>
-          c.id === conversationId
-            ? {
-                ...c,
-                lastMessage: { text, timestamp: newMsg.sentAt },
-              }
-            : c
-        ),
-      };
-    });
-    return newMsg;
+      }));
+      return list;
+    } catch {
+      return [];
+    }
   },
 
-  /** Marquer une conversation comme lue */
+  setSelectedConversationId: (id) => {
+    set({ selectedConversationId: id });
+    if (id) {
+      get().markAsRead(id);
+      get().fetchMessagesForConversation(id);
+    }
+  },
+
+  sendMessage: async (conversationId, text) => {
+    try {
+      const data = await chatService.sendMessage(conversationId, text);
+      const msg = mapMessage(data);
+      set((state) => {
+        const prev = state.messagesByConversationId[conversationId] ?? [];
+        return {
+          messagesByConversationId: {
+            ...state.messagesByConversationId,
+            [conversationId]: [...prev, msg],
+          },
+          conversations: state.conversations.map((c) =>
+            c.id === conversationId
+              ? { ...c, lastMessage: { text, timestamp: msg.sentAt } }
+              : c
+          ),
+        };
+      });
+      return msg;
+    } catch (e) {
+      throw e;
+    }
+  },
+
   markAsRead: (conversationId) => {
     set((state) => ({
       conversations: state.conversations.map((c) =>
@@ -150,7 +108,6 @@ export const useChatStore = create((set, get) => ({
     }));
   },
 
-  /** Mettre à jour le statut online (mock) */
   setParticipantOnline: (conversationId, isOnline) => {
     set((state) => ({
       conversations: state.conversations.map((c) =>
@@ -159,7 +116,6 @@ export const useChatStore = create((set, get) => ({
     }));
   },
 
-  /** Total des messages non lus */
   getTotalUnread: () => {
     return get().conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
   },

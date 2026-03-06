@@ -17,7 +17,7 @@ import { HiOutlineOfficeBuilding } from "react-icons/hi";
  * - Padding interne pour éviter que le ring soit coupé
  * - ring-offset pour un rendu propre
  */
-export default function Step6Centers({ data, setData, onNext, onBack }) {
+export default function Step6Centers({ data, setData, onNext, onBack, onSkip }) {
   const { t } = useTranslation();
 
   /**
@@ -80,22 +80,20 @@ export default function Step6Centers({ data, setData, onNext, onBack }) {
       </div>
 
       {/* Boutons de navigation */}
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          className="rounded"
-          onClick={onBack}
-        >
-          ← {t("signup.back")}
-        </Button>
-
-        <Button
-          className="rounded"
-          onClick={onNext}
-          disabled={!data.center}
-        >
-          {t("signup.subscribe")}
-        </Button>
+      <div className="flex flex-col gap-3">
+        <div className="flex justify-between">
+          <Button variant="outline" className="rounded" onClick={onBack}>
+            ← {t("signup.back")}
+          </Button>
+          <Button className="rounded" onClick={onNext} disabled={!data.center}>
+            {t("signup.subscribe")}
+          </Button>
+        </div>
+        {onSkip && (
+          <Button variant="outline" onClick={onSkip} className="rounded w-full text-black/60">
+            {t("signup.skip")}
+          </Button>
+        )}
       </div>
     </motion.div>
   );

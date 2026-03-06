@@ -6,9 +6,20 @@ import { CenterCard } from "../../../shared/components/CenterCard";
 import { HiOutlineOfficeBuilding } from "react-icons/hi";
 import { toast } from "react-toastify";
 
-/** StepTutorCenters – Étape optionnelle : rejoindre un centre */
+/** StepTutorCenters – Étape optionnelle : proposer des centres en fonction des matières enseignées */
 export default function StepTutorCenters({ data, setData, onNext, onBack, onSkip }) {
   const { t } = useTranslation();
+
+  const tutorSubjects = (data.tutorSubjects ?? []).map((s) => s.toLowerCase());
+
+  const filteredCenters =
+    tutorSubjects.length === 0
+      ? centers
+      : centers.filter((center) =>
+          (center.subjects || []).some((subject) =>
+            tutorSubjects.includes(subject.name.toLowerCase())
+          )
+        );
 
   const handleSelectCenter = (center) => {
     setData((prev) => ({
@@ -42,18 +53,27 @@ export default function StepTutorCenters({ data, setData, onNext, onBack, onSkip
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
-      <h1 className="text-3xl font-bold flex items-center gap-3">
+      <h1 className="text-3xl font-bold flex items_center gap-3">
         <HiOutlineOfficeBuilding className="text-primary" size={32} />
         Rejoindre un centre
       </h1>
 
       <p className="text-black/70">
-        Vous pouvez demander à rejoindre un centre pour collaborer avec
-        d'autres tuteurs. Cette étape est facultative.
+        {tutorSubjects.length > 0
+          ? `Nous vous suggérons des centres qui proposent au moins une de vos matières : ${data.tutorSubjects.join(
+              ", "
+            )}.`
+          : "Vous pouvez demander à rejoindre un centre pour collaborer avec d'autres tuteurs. Cette étape est facultative."}
       </p>
 
+      {filteredCenters.length === 0 && tutorSubjects.length > 0 && (
+        <p className="text-sm text-red-600">
+          Aucun centre ne correspond encore à vos matières. Vous pouvez ignorer cette étape et créer votre propre centre plus tard.
+        </p>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto p-2 scrollbar-hide">
-        {centers.map((center) => {
+        {filteredCenters.map((center) => {
           const isSelected = data.tutorCenter?.id === center.id;
 
           return (

@@ -62,7 +62,7 @@ export default function Step4Level({ data, setData, onNext, onBack, onSkip }) {
           </Button>
 
           {/* Bouton ignorer, pour passer au dashboard */}
-          <Button onClick={onSkip} className="rounded" variant="outline" disabled={!data.role}>
+          <Button onClick={onSkip} className="rounded" variant="outline">
             {t("signup.skip")}
           </Button>
         </div>

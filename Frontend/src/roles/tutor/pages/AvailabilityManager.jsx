@@ -1,10 +1,11 @@
 // src/roles/tutor/pages/AvailabilityManager.jsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { useCoursesStore } from "../../../app/store/courses.store";
 import { DayAvailabilityRow } from "../../../shared/components/availability/DayAvailabilityRow";
 import { Button } from "../../../shared/ui/Button";
+import { ConfirmModal } from "../../../shared/components/ConfirmModal";
 
 const DAY_NAMES = [
   { day: 0, name: "Dimanche" },
@@ -19,96 +20,102 @@ const DAY_NAMES = [
 /**
  * AvailabilityManager
  * --------------------
- * Gestionnaire de disponibilités style Preply pour tutor.
- * Permet de définir les créneaux hebdomadaires avec toggle actif/inactif,
- * plages horaires multiples, ajouter/supprimer plages, copier vers autres jours.
+ * Gestionnaire de disponibilités hebdomadaires pour tuteur.
+ * Branché sur l'API de disponibilités :
+ * - lecture des créneaux depuis la BD
+ * - mise à jour automatique à chaque modification (sans bouton "Enregistrer")
+ * - copie de plages vers les autres jours actifs avec confirmation en modal.
  */
 export const AvailabilityManager = () => {
   const { t } = useTranslation();
-  const { weeklyAvailability, setWeeklyAvailability } = useCoursesStore();
+  const { weeklyAvailability, setWeeklyAvailability, fetchAvailability } = useCoursesStore();
 
-  // État local pour gérer les disponibilités par jour
-  const [availability, setAvailability] = useState(() => {
-    // Initialiser avec les disponibilités existantes ou valeurs par défaut
-    const defaultAvailability = DAY_NAMES.map(({ day }) => ({
-      day,
-      isActive: false,
-      timeRanges: [],
-    }));
+  // Config pour la copie vers autres jours (modal)
+  const [copySourceDay, setCopySourceDay] = useState(null);
+  const [copyRanges, setCopyRanges] = useState([]);
+  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
 
-    // Remplir avec les disponibilités existantes
-    if (weeklyAvailability && weeklyAvailability.length > 0) {
-      weeklyAvailability.forEach((slot) => {
-        const dayIndex = defaultAvailability.findIndex((a) => a.day === slot.day);
-        if (dayIndex >= 0) {
-          const existingRange = defaultAvailability[dayIndex].timeRanges.find(
-            (r) => r.start === slot.start && r.end === slot.end
-          );
-          if (!existingRange) {
-            defaultAvailability[dayIndex].timeRanges.push({
-              start: slot.start,
-              end: slot.end,
-            });
-          }
-          defaultAvailability[dayIndex].isActive = true;
-        }
-      });
-    }
-
-    return defaultAvailability;
+  // Charger les disponibilités depuis la BD au montage
+  useState(() => {
+    fetchAvailability?.();
   });
 
-  // Sauvegarder les changements
-  const handleSave = () => {
-    const slots = [];
-    availability.forEach((dayAvail) => {
-      if (dayAvail.isActive && dayAvail.timeRanges.length > 0) {
-        dayAvail.timeRanges.forEach((range) => {
-          slots.push({
-            day: dayAvail.day,
+  const getDayAvailability = (day) => {
+    const ranges = (weeklyAvailability || [])
+      .filter((slot) => slot.day === day)
+      .map((slot) => ({ start: slot.start, end: slot.end }));
+    return {
+      isActive: ranges.length > 0,
+      timeRanges: ranges,
+    };
+  };
+
+  const buildSlotsWithDay = (day, timeRanges) => {
+    const base = weeklyAvailability || [];
+    const withoutDay = base.filter((slot) => slot.day !== day);
+    const newSlots =
+      (timeRanges || []).length > 0
+        ? timeRanges.map((range) => ({
+            day,
             start: range.start,
             end: range.end,
-          });
-        });
-      }
-    });
-    setWeeklyAvailability(slots);
-    // TODO: Afficher un message de succès
+          }))
+        : [];
+    return [...withoutDay, ...newSlots];
   };
 
-  // Mettre à jour les disponibilités d'un jour
-  const handleDayChange = (day, updates) => {
-    setAvailability((prev) =>
-      prev.map((a) => (a.day === day ? { ...a, ...updates } : a))
-    );
-  };
-
-  // Toggle actif/inactif pour un jour
   const handleToggle = (day, isActive) => {
-    handleDayChange(day, { isActive });
-  };
+    const current = getDayAvailability(day);
+    let ranges = current.timeRanges;
 
-  // Changer les plages horaires d'un jour
-  const handleTimeRangesChange = (day, timeRanges) => {
-    handleDayChange(day, { timeRanges });
-  };
-
-  // Copier les plages vers d'autres jours
-  const handleCopyTo = (sourceDay, timeRanges) => {
-    const sourceDayName = DAY_NAMES.find((d) => d.day === sourceDay)?.name;
-    // Demander confirmation (simplifié ici)
-    const confirmCopy = window.confirm(
-      t("availability.copyConfirm", "Copier ces plages vers tous les autres jours actifs ?")
-    );
-    if (confirmCopy) {
-      setAvailability((prev) =>
-        prev.map((a) =>
-          a.day !== sourceDay && a.isActive
-            ? { ...a, timeRanges: [...timeRanges] }
-            : a
-        )
-      );
+    if (!isActive) {
+      ranges = [];
+    } else if (ranges.length === 0) {
+      ranges = [{ start: 9 * 60, end: 17 * 60 }];
     }
+
+    const slots = buildSlotsWithDay(day, ranges);
+    setWeeklyAvailability(slots);
+  };
+
+  const handleTimeRangesChange = (day, timeRanges) => {
+    const slots = buildSlotsWithDay(day, timeRanges);
+    setWeeklyAvailability(slots);
+  };
+
+  const handleCopyTo = (sourceDay, timeRanges) => {
+    setCopySourceDay(sourceDay);
+    setCopyRanges(timeRanges);
+    setIsCopyModalOpen(true);
+  };
+
+  const handleConfirmCopy = () => {
+    if (copySourceDay == null || !copyRanges.length) return;
+    const base = weeklyAvailability || [];
+
+    // Jours actifs (avec au moins une plage), hors jour source
+    const activeOtherDays = DAY_NAMES.filter(
+      ({ day }) =>
+        day !== copySourceDay &&
+        base.some((slot) => slot.day === day)
+    ).map(({ day }) => day);
+
+    if (activeOtherDays.length === 0) return;
+
+    // Supprimer les créneaux des jours cibles puis appliquer les plages copiées
+    let nextSlots = base.filter((slot) => !activeOtherDays.includes(slot.day));
+    activeOtherDays.forEach((day) => {
+      nextSlots = [
+        ...nextSlots,
+        ...copyRanges.map((range) => ({
+          day,
+          start: range.start,
+          end: range.end,
+        })),
+      ];
+    });
+
+    setWeeklyAvailability(nextSlots);
   };
 
   return (
@@ -122,9 +129,6 @@ export const AvailabilityManager = () => {
             {t("teacherPages.availabilitySubtitle", "Définissez vos créneaux hebdomadaires et dates bloquées.")}
           </p>
         </div>
-        <Button variant="primary" className="rounded" onClick={handleSave}>
-          {t("common.save", "Enregistrer")}
-        </Button>
       </div>
 
       {/* Liste des jours */}
@@ -135,7 +139,7 @@ export const AvailabilityManager = () => {
 
         <div className="space-y-0">
           {DAY_NAMES.map(({ day, name }) => {
-            const dayAvailability = availability.find((a) => a.day === day);
+            const dayAvailability = getDayAvailability(day);
             return (
               <DayAvailabilityRow
                 key={day}
@@ -158,6 +162,20 @@ export const AvailabilityManager = () => {
           {t("teacherPages.bufferNote", "Un buffer entre cours pourra être ajouté plus tard (ex. 15 min).")}
         </p>
       </div>
+
+      <ConfirmModal
+        isOpen={isCopyModalOpen}
+        onClose={() => setIsCopyModalOpen(false)}
+        onConfirm={handleConfirmCopy}
+        title={t("availability.copyTitle", "Copier les plages horaires")}
+        message={t(
+          "availability.copyConfirm",
+          "Copier ces plages vers tous les autres jours actifs ?"
+        )}
+        confirmLabel={t("common.confirm", "Confirmer")}
+        cancelLabel={t("common.cancel", "Annuler")}
+        variant="primary"
+      />
     </div>
   );
 };

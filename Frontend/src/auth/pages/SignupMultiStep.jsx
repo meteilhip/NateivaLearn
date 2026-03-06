@@ -6,6 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../app/store/auth.store";
+import { authService } from "../../services";
 
 // ==================== STEPS COMMUNS ====================
 import Step0UserInfo from "./Step0UserInfo";
@@ -71,6 +72,9 @@ export default function SignupMultiStep() {
     centerLogo: null,
     centerCountry: "",
     centerLanguages: [],
+    centerRequiredLanguages: [],
+    centerSubjects: [],
+    ownerLanguages: [],
   });
 
   /**
@@ -78,10 +82,25 @@ export default function SignupMultiStep() {
    * -------------------
    * Valide UNIQUEMENT les étapes bloquantes
    */
-  const handleNext = () => {
-    // Étape 0 : infos utilisateur
-    if (step === 0 && (!data.name || !data.email)) {
-      return toast.error(t("signup.errorEmpty"));
+  const handleNext = async () => {
+    // Étape 0 : infos utilisateur + validation email (format + disponibilité)
+    if (step === 0) {
+      if (!data.name || !data.email) {
+        return toast.error(t("signup.errorEmpty"));
+      }
+      const email = data.email.trim().toLowerCase();
+      // Validation simple du format email côté frontend
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return toast.error(t("signup.errorEmailInvalid"));
+      }
+      try {
+        await authService.checkEmail(email);
+      } catch (err) {
+        const backendMessage = err?.data?.errors?.email?.[0] || err?.data?.message;
+        toast.error(backendMessage || t("signup.errorEmailTaken"));
+        return;
+      }
     }
 
     // Étape 1 : ville + téléphone
@@ -96,6 +115,9 @@ export default function SignupMultiStep() {
       }
       if (data.password !== data.confirmPassword) {
         return toast.error(t("signup.errorPassword"));
+      }
+      if (data.password.length < 8) {
+        return toast.error(t("signup.errorPasswordWeak"));
       }
     }
 
@@ -144,10 +166,19 @@ export default function SignupMultiStep() {
    * Soumission finale (learner / tutor).
    * On ne redirige que si l'inscription a réussi.
    */
-  const handleSubmit = () => {
-    const result = register(data);
+  const handleSubmit = async () => {
+    const result = await register(data);
     if (result?.error) {
+      // Toast global
       toast.error(result.error);
+      // Toasts détaillés par champ si disponibles (422 validation)
+      if (result.errors) {
+        Object.values(result.errors).forEach((messages) => {
+          if (Array.isArray(messages) && messages[0]) {
+            toast.error(messages[0]);
+          }
+        });
+      }
       return;
     }
     toast.success(t("signup.success"));
@@ -174,30 +205,38 @@ export default function SignupMultiStep() {
    * Soumission center_owner : créer Organisation + Membership(owner), puis register user avec organizationIds.
    * centerData passé par Step4CenterSetup pour éviter state asynchrone.
    */
-  const handleSubmitCenterOwner = (centerData = {}) => {
-    const ownerId = data.email || `user-${Date.now()}`;
-    const org = createOrganization({
+  const handleSubmitCenterOwner = async (centerData = {}) => {
+    const userData = {
+      ...data,
+      role: ROLES.CenterOwner || "center_owner",
+    };
+    const result = await register(userData);
+    if (result?.error) {
+      toast.error(result.error);
+      if (result.errors) {
+        Object.values(result.errors).forEach((messages) => {
+          if (Array.isArray(messages) && messages[0]) {
+            toast.error(messages[0]);
+          }
+        });
+      }
+      return;
+    }
+    const orgResult = await createOrganization({
       name: centerData.centerName || data.centerName,
       description: centerData.centerDescription ?? data.centerDescription,
       logo: centerData.centerLogo ?? data.centerLogo,
       country: centerData.centerCountry ?? data.centerCountry,
-      languages: centerData.centerLanguages ?? data.centerLanguages,
-      ownerId,
+      languages: centerData.centerRequiredLanguages ?? data.centerRequiredLanguages ?? data.centerLanguages ?? [],
+      subjects: centerData.centerSubjects ?? data.centerSubjects ?? [],
+      ownerId: useAuthStore.getState().user?.id,
     });
-    const userData = {
-      ...data,
-      organizationIds: [org.id],
-      activeOrganizationId: org.id,
-    };
-    const result = register(userData);
-    if (result?.error) {
-      toast.error(result.error);
+    if (orgResult?.error) {
+      toast.error(orgResult.error);
       return;
     }
     toast.success(t("signup.success"));
-    setTimeout(() => {
-      navigate("/center_owner/dashboard", { replace: true });
-    }, 300);
+    setTimeout(() => navigate("/center_owner/dashboard", { replace: true }), 300);
   };
 
   /** Progress bar (8 steps max) */
@@ -233,19 +272,90 @@ export default function SignupMultiStep() {
           {/* COMMUN */}
           {step === 0 && <Step0UserInfo data={data} setData={setData} onNext={handleNext} />}
           {step === 1 && <Step1CityAndNumber data={data} setData={setData} onNext={handleNext} onBack={handleBack} />}
-          {step === 2 && <Step2Password data={data} setData={setData} showPassword={showPassword} setShowPassword={setShowPassword} onNext={handleNext} onBack={handleBack} />}
-          {step === 3 && <Step3Role data={data} setData={setData} onNext={handleNext} onBack={handleBack} />}
+          {step === 2 && (
+            <Step2Password
+              data={data}
+              setData={setData}
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+              onNext={handleNext}
+              onBack={handleBack}
+            />
+          )}
+          {step === 3 && (
+            <Step3Role
+              data={data}
+              setData={setData}
+              onNext={handleNext}
+              onBack={handleBack}
+              onSkip={() => {
+                setData((prev) => ({ ...prev, role: ROLES.Learner }));
+                setStep((prev) => prev + 1);
+              }}
+            />
+          )}
 
           {/* LEARNER */}
-          {step === 4 && data.role === ROLES.Learner && <Step4Level data={data} setData={setData} onNext={handleNext} onBack={handleBack} />}
-          {step === 5 && data.role === ROLES.Learner && <Step5Subjects data={data} setData={setData} onNext={handleNext} onBack={handleBack} />}
-          {step === 6 && data.role === ROLES.Learner && <Step6Centers data={data} setData={setData} onNext={handleNext} onBack={handleBack} />}
-          {step === 7 && data.role === ROLES.Learner && <Step7Subscription data={data} setData={setData} onNext={handleSubmit} onBack={handleBack} />}
+          {step === 4 && data.role === ROLES.Learner && (
+            <Step4Level
+              data={data}
+              setData={setData}
+              onNext={handleNext}
+              onBack={handleBack}
+              onSkip={() => {
+                setData((prev) => ({ ...prev, level: prev.level || "Débutant" }));
+                setStep((prev) => prev + 1);
+              }}
+            />
+          )}
+          {step === 5 && data.role === ROLES.Learner && (
+            <Step5Subjects
+              data={data}
+              setData={setData}
+              onNext={handleNext}
+              onBack={handleBack}
+              onSkip={() => setStep((prev) => prev + 1)}
+            />
+          )}
+          {step === 6 && data.role === ROLES.Learner && (
+            <Step6Centers
+              data={data}
+              setData={setData}
+              onNext={handleNext}
+              onBack={handleBack}
+              onSkip={() => setStep((prev) => prev + 1)}
+            />
+          )}
+          {step === 7 && data.role === ROLES.Learner && <Step7Subscription data={data} setData={setData} onNext={handleSubmit} onBack={handleBack} onSkip={handleSubmit} />}
 
           {/* TUTOR */}
-          {step === 4 && data.role === ROLES.Tutor && <StepTutorSubjects data={data} setData={setData} onNext={() => setStep((p) => p + 1)} onBack={handleBack} />}
-          {step === 5 && data.role === ROLES.Tutor && <StepTutorLanguages data={data} setData={setData} onNext={() => setStep((p) => p + 1)} onBack={handleBack} />}
-          {step === 6 && data.role === ROLES.Tutor && <StepTutorVideo data={data} setData={setData} onNext={() => setStep((p) => p + 1)} onBack={handleBack} />}
+          {step === 4 && data.role === ROLES.Tutor && (
+            <StepTutorSubjects
+              data={data}
+              setData={setData}
+              onNext={() => setStep((p) => p + 1)}
+              onBack={handleBack}
+              onSkip={() => setStep((prev) => prev + 1)}
+            />
+          )}
+          {step === 5 && data.role === ROLES.Tutor && (
+            <StepTutorLanguages
+              data={data}
+              setData={setData}
+              onNext={() => setStep((p) => p + 1)}
+              onBack={handleBack}
+              onSkip={() => setStep((prev) => prev + 1)}
+            />
+          )}
+          {step === 6 && data.role === ROLES.Tutor && (
+            <StepTutorVideo
+              data={data}
+              setData={setData}
+              onNext={() => setStep((p) => p + 1)}
+              onBack={handleBack}
+              onSkip={() => setStep((prev) => prev + 1)}
+            />
+          )}
           {step === 7 && data.role === ROLES.Tutor && (
             <StepTutorCenters data={data} setData={setData} onBack={handleBack} onNext={handleSubmit} onSkip={handleSubmit} />
           )}

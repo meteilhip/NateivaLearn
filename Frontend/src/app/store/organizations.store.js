@@ -1,150 +1,130 @@
 // src/app/store/organizations.store.js
 import { create } from "zustand";
+import { organizationService } from "../../services";
 
-/**
- * ORGANIZATIONS STORE (mock)
- * --------------------------
- * 👑 center_owner : gère ses organisations.
- * Types mockés :
- *   Organization { id, name, description, logo, ownerId, tutorIds[], learnerIds[], createdAt }
- *   Membership { userId, organizationId, role: "owner" | "tutor" | "learner" }
- *
- * 🔌 FUTUR BACKEND : endpoints createOrganization, listMemberships, etc.
- */
-
-function getLocalStorage(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw == null || raw === "") return fallback;
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
+function mapOrg(o) {
+  if (!o) return o;
+  const languages = o.required_languages ?? o.requiredLanguages;
+  return {
+    ...o,
+    ownerId: o.owner_id ?? o.ownerId,
+    requiredLanguages: Array.isArray(languages) ? languages : languages,
+  };
+}
+function mapRequest(r) {
+  if (!r) return r;
+  return { ...r, userId: r.user_id ?? r.userId, organizationId: r.organization_id ?? r.organizationId };
 }
 
 export const useOrganizationsStore = create((set, get) => ({
-  /** Liste des organisations (mock) */
-  organizations: getLocalStorage("organizations", []),
+  organizations: [],
+  membershipRequests: [],
 
-  /** Memberships : userId, organizationId, role */
-  memberships: getLocalStorage("memberships", []),
-
-  /** Demandes de membership en attente */
-  membershipRequests: getLocalStorage("membershipRequests", []),
-
-  /**
-   * Créer une organisation (inscription center_owner).
-   * Crée Organization + Membership(owner) et retourne l'organisation.
-   */
-  createOrganization: (payload) => {
-    const { name, description, logo, country, languages, ownerId } = payload;
-    const orgs = getLocalStorage("organizations", []);
-    const mems = getLocalStorage("memberships", []);
-    const id = `org-${Date.now()}`;
-    const org = {
-      id,
-      name: name || "Mon centre",
-      description: description || "",
-      logo: logo || null,
-      country: country || "",
-      languages: Array.isArray(languages) ? languages : [languages].filter(Boolean),
-      ownerId,
-      tutorIds: [],
-      learnerIds: [],
-      createdAt: new Date().toISOString(),
-    };
-    const membership = {
-      userId: ownerId,
-      organizationId: id,
-      role: "owner",
-    };
-    const newOrgs = [...(Array.isArray(orgs) ? orgs : []), org];
-    const newMems = [...(Array.isArray(mems) ? mems : []), membership];
-    localStorage.setItem("organizations", JSON.stringify(newOrgs));
-    localStorage.setItem("memberships", JSON.stringify(newMems));
-    set({ organizations: newOrgs, memberships: newMems });
-    return org;
+  fetchOrganizations: async () => {
+    try {
+      const data = await organizationService.list();
+      set({ organizations: (data ?? []).map(mapOrg) });
+      return get().organizations;
+    } catch {
+      set({ organizations: [] });
+      return [];
+    }
   },
 
-  /** Récupérer les organisations d'un user (par memberships) */
+  createOrganization: async (payload) => {
+    const { name, description, logo, country, languages, ownerId, subjects } = payload;
+    try {
+      const org = await organizationService.create({
+        name: name || "Mon centre",
+        city: country,
+        description: description || "",
+        logo: logo ?? null,
+        required_languages: Array.isArray(languages) ? languages : null,
+        subjects: Array.isArray(subjects) ? subjects : null,
+      });
+      set((state) => ({ organizations: [mapOrg(org), ...state.organizations] }));
+      return mapOrg(org);
+    } catch (err) {
+      const msg = err?.data?.message || err?.message;
+      return { error: msg };
+    }
+  },
+
+  updateOrganization: async (organizationId, payload) => {
+    try {
+      const updated = await organizationService.update(organizationId, {
+        name: payload.name,
+        city: payload.city,
+        description: payload.description,
+        logo: payload.logo,
+        required_languages: payload.required_languages ?? payload.requiredLanguages,
+        subjects: payload.subjects,
+      });
+      set((state) => ({
+        organizations: state.organizations.map((o) =>
+          String(o.id) === String(organizationId) ? mapOrg(updated) : o
+        ),
+      }));
+      return mapOrg(updated);
+    } catch (err) {
+      const msg = err?.data?.message || err?.message;
+      throw new Error(msg || "Erreur lors de la mise à jour du centre");
+    }
+  },
+
   getOrganizationsForUser: (userId) => {
-    const { organizations, memberships } = get();
-    const orgIds = (memberships || [])
-      .filter((m) => m.userId === userId)
-      .map((m) => m.organizationId);
-    return (organizations || []).filter((o) => orgIds.includes(o.id));
+    return get().organizations;
   },
 
-  /** Récupérer le rôle d'un user dans une organisation */
-  getMembershipRole: (userId, organizationId) => {
-    const m = (get().memberships || []).find(
-      (x) => x.userId === userId && x.organizationId === organizationId
-    );
-    return m ? m.role : null;
-  },
-
-  /** Organisation par id */
   getOrganizationById: (id) => {
-    return (get().organizations || []).find((o) => o.id === id);
+    return get().organizations.find((o) => String(o.id) === String(id));
   },
 
-  /**
-   * Créer une demande de membership pour un tuteur (ou learner)
-   * Simule une demande qui sera approuvée par le propriétaire du centre
-   */
-  requestMembership: (payload) => {
+  requestMembership: async (payload) => {
     const { userId, organizationId, role = "tutor" } = payload;
-    const mems = getLocalStorage("memberships", []);
-    const requests = getLocalStorage("membershipRequests", []);
-    
-    // Vérifier si une demande existe déjà
-    const existingRequest = (Array.isArray(requests) ? requests : []).find(
-      (r) => r.userId === userId && r.organizationId === organizationId && r.status === "pending"
-    );
-    if (existingRequest) {
-      return { error: "Une demande existe déjà pour ce centre" };
+    try {
+      const data = await organizationService.requestMembership({
+        organizationId,
+        role,
+      });
+      return { success: true, request: mapRequest(data) };
+    } catch (err) {
+      const msg = err?.data?.message || err?.message || "Erreur";
+      return { error: msg };
     }
-
-    // Vérifier si l'utilisateur est déjà membre
-    const existingMembership = (Array.isArray(mems) ? mems : []).find(
-      (m) => m.userId === userId && m.organizationId === organizationId
-    );
-    if (existingMembership) {
-      return { error: "Vous êtes déjà membre de ce centre" };
-    }
-
-    const newRequest = {
-      id: `req-${Date.now()}`,
-      userId,
-      organizationId,
-      role,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    };
-
-    const newRequests = [...(Array.isArray(requests) ? requests : []), newRequest];
-    localStorage.setItem("membershipRequests", JSON.stringify(newRequests));
-    
-    // Mettre à jour le state pour que les composants se mettent à jour
-    set((state) => ({
-      ...state,
-      membershipRequests: newRequests,
-    }));
-    
-    return { success: true, request: newRequest };
   },
 
-  /** Obtenir les demandes de membership pour une organisation */
+  fetchMembershipRequests: async (organizationId) => {
+    try {
+      const data = await organizationService.getMembershipRequests(organizationId);
+      set({ membershipRequests: (data ?? []).map(mapRequest) });
+      return get().membershipRequests;
+    } catch {
+      return [];
+    }
+  },
+
   getMembershipRequests: (organizationId) => {
-    const requests = get().membershipRequests || getLocalStorage("membershipRequests", []);
-    return requests.filter((r) => r.organizationId === organizationId && r.status === "pending");
+    return get().membershipRequests.filter(
+      (r) => String(r.organizationId ?? r.organization_id) === String(organizationId) && r.status === "pending"
+    );
   },
 
-  /** Vérifier si un utilisateur a une demande en attente pour un centre */
+  updateMembershipStatus: async (membershipId, status) => {
+    try {
+      await organizationService.updateMembership(membershipId, { status });
+      await get().fetchMembershipRequests?.();
+    } catch (err) {
+      throw err;
+    }
+  },
+
   hasPendingRequest: (userId, organizationId) => {
-    const requests = get().membershipRequests || getLocalStorage("membershipRequests", []);
-    return requests.some(
-      (r) => r.userId === userId && r.organizationId === organizationId && r.status === "pending"
+    return get().membershipRequests.some(
+      (r) =>
+        String(r.userId ?? r.user_id) === String(userId) &&
+        String(r.organizationId ?? r.organization_id) === String(organizationId) &&
+        r.status === "pending"
     );
   },
 }));

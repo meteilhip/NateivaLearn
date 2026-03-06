@@ -70,21 +70,10 @@ export default function Step2Password({ data, setData, showPassword, setShowPass
 
       {/* Boutons de navigation */}
       <div className="flex justify-between mt-6">
-        {/* Bouton Retour */}
-        <Button
-          variant="outline"
-          onClick={onBack}
-          className="rounded"
-        >
+        <Button variant="outline" onClick={onBack} className="rounded">
           ← {t("signup.back")}
         </Button>
-
-        {/* Bouton Continuer */}
-        <Button
-          variant="primary"
-          onClick={onNext}
-          className="rounded"
-        >
+        <Button variant="primary" onClick={onNext} className="rounded">
           {t("signup.continue")}
         </Button>
       </div>

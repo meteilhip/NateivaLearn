@@ -11,6 +11,7 @@ import { Input } from "../../shared/ui/Input";
 import { Button } from "../../shared/ui/Button";
 import { useAuthStore } from "../../app/store/auth.store";
 import { ROLES } from "../../shared/utils/roles";
+import { useTranslation } from "react-i18next";
 
 /**
  * Login
@@ -24,6 +25,7 @@ import { ROLES } from "../../shared/utils/roles";
 export default function Login() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
+  const { t } = useTranslation();
 
   /** État du formulaire */
   const [form, setForm] = useState({
@@ -34,26 +36,37 @@ export default function Login() {
   /** Affichage / masquage du mot de passe */
   const [showPassword, setShowPassword] = useState(false);
 
+  const isValidEmail = (email) => {
+    const trimmed = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(trimmed);
+  };
+
   /**
-   * Soumission de la connexion
+   * Soumission de la connexion (clic ou touche Entrée)
    */
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.email || !form.password) {
-      return toast.error("Veuillez remplir tous les champs");
+      return toast.error(t("login.errorEmpty"));
+    }
+    if (!isValidEmail(form.email)) {
+      return toast.error(t("login.errorEmailInvalid"));
     }
 
-    const result = login(form);
+    const result = await login(form);
 
     if (result?.error) {
-      return toast.error(result.error);
+      // Si le backend renvoie une erreur de validation 422 (mauvais identifiants),
+      // on remplace le message générique par un message clair côté UI.
+      const message =
+        (result.errors && (result.errors.email || result.errors.password)) ?
+          t("login.errorCredentials") :
+          result.error || t("login.errorCredentials");
+      return toast.error(message);
     }
 
-    toast.success("Connexion réussie");
-
-    // Récupération de l'utilisateur connecté
-    const user = JSON.parse(localStorage.getItem("currentUser"));
-
-    // Redirection selon le rôle (learner, tutor, center_owner). Compat anciens rôles "student"/"teacher"
+    toast.success(t("login.success"));
+    const user = useAuthStore.getState().user;
     setTimeout(() => {
       const role = user?.role;
       if (role === ROLES.Learner || role === "student") {
@@ -73,6 +86,13 @@ export default function Login() {
    */
   const handleGoToSignup = () => {
     navigate("/signup");
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit();
+    }
   };
 
   return (
@@ -105,24 +125,22 @@ export default function Login() {
       {/* Email */}
       <Input
         type="email"
-        placeholder="Votre adresse email"
+        placeholder={t("login.emailPlaceholder")}
         value={form.email}
-        onChange={(e) =>
-          setForm({ ...form, email: e.target.value })
-        }
+        onChange={(e) => setForm({ ...form, email: e.target.value })}
         icon={FiMail}
+        onKeyDown={handleKeyDown}
       />
 
       {/* Mot de passe avec œil */}
       <div className="relative">
         <Input
           type={showPassword ? "text" : "password"}
-          placeholder="Votre mot de passe"
+          placeholder={t("login.passwordPlaceholder")}
           value={form.password}
-          onChange={(e) =>
-            setForm({ ...form, password: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
           icon={FiLock}
+          onKeyDown={handleKeyDown}
         />
 
         {/* Bouton afficher / masquer */}
@@ -146,9 +164,9 @@ export default function Login() {
           onClick={handleGoToSignup}
           className="text-sm text-black/60 hover:text-primary transition"
         >
-          Pas encore de compte ?
+          {t("login.noAccountQuestion")}
           <span className="ml-1 font-semibold text-primary">
-            Créer un compte
+            {t("login.createAccountCta")}
           </span>
         </button>
 
@@ -158,7 +176,7 @@ export default function Login() {
           onClick={handleSubmit}
           className="rounded"
         >
-          Se connecter
+          {t("login.submit")}
         </Button>
       </div>
     </motion.div>

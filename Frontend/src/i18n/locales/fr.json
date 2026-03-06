@@ -30,10 +30,18 @@
     "centerDescription": "Description",
     "centerDescriptionPlaceholder": "Décrivez votre centre...",
     "centerLogo": "Logo",
+    "centerLogoDescription": "Image représentative de votre centre (logo ou photo). Les membres la verront sur la fiche du centre.",
+    "centerLogoChange": "Changer l'image",
+    "centerLogoRemove": "Supprimer l'image",
     "centerLogoMock": "Upload simulé (à brancher plus tard)",
     "centerCountry": "Pays",
     "centerCountryPlaceholder": "Ex. Cameroun",
     "centerLanguages": "Langues proposées",
+    "centerRequiredLanguages": "Langues exigées",
+    "centerRequiredLanguagesDescription": "Pour rejoindre mon centre, il faut savoir parler au moins une de ces langues. Sélectionnez toutes celles que vous exigez.",
+    "centerSubjects": "Matières que le centre propose",
+    "centerSubjectsDescription": "Pour rejoindre mon centre, vous devez être tuteur d'au moins une de ces matières. Optionnel : laissez vide si vous acceptez tous les profils.",
+    "ownerLanguagesDescription": "Sélectionnez les langues que vous parlez pour enseigner dans votre centre. Elles apparaîtront dans votre profil public.",
     "finish": "Terminer",
     "errorRole": "Veuillez sélectionner un rôle",
     "success": "Inscription réussie !",
@@ -44,6 +52,7 @@
     "errorTeacher": "Veuillez sélectionner un enseignant",
     "back": "Retour",
     "searchSubject": "Rechercher une matière...",
+    "searchLanguage": "Rechercher une langue...",
     "chooseLevel": "Choisis ton niveau",
     "chooseLevelInfo": "Cela nous aide à te proposer les centres adaptés",
     "chooseSubjects": "Choisis tes matières",
@@ -54,9 +63,26 @@
     "chooseSubscriptionInfo": "Sélectionne le plan qui te convient",
     "errorSubscription": "Veuillez sélectionner un abonnement",
     "subscribe": " Je veux prendre un abonnement ",
-    "skip": "Ignorer pour l'instant",
+    "skip": "Ignorer",
+    "errorEmailInvalid": "Veuillez saisir un email valide",
+    "errorEmailTaken": "Cet utilisateur existe déjà avec cet email",
+    "errorPasswordWeak": "Votre mot de passe est trop faible (8 caractères minimum)",
+    "errorLanguage": "Veuillez sélectionner au moins une langue",
     "teacherSubjectsTitle": "Quelles matières enseignez-vous ?",
     "teacherSubjectsInfo": "Sélectionnez une ou plusieurs matières que vous pouvez enseigner."
+  },
+  "login": {
+    "title": "Bon retour",
+    "intro": "Connectez-vous pour reprendre là où vous vous êtes arrêté.",
+    "emailPlaceholder": "Votre adresse email",
+    "passwordPlaceholder": "Votre mot de passe",
+    "submit": "Se connecter",
+    "noAccountQuestion": "Pas encore de compte ?",
+    "createAccountCta": "Créer un compte",
+    "errorEmpty": "Veuillez remplir tous les champs",
+    "errorEmailInvalid": "Veuillez saisir un email valide",
+    "errorCredentials": "Email ou mot de passe incorrect",
+    "success": "Connexion réussie"
   },
   "subscription": {
     "daily": "Journalier",
@@ -99,7 +125,13 @@
     "addSubject": "Ajouter une matière",
     "joinCenter": "Rejoindre le centre",
     "requestPending": "Demande en attente",
-    "joinRequestSent": "Demande envoyée avec succès ! Le propriétaire du centre examinera votre demande."
+    "joinRequestSent": "Demande envoyée avec succès ! Le propriétaire du centre examinera votre demande.",
+    "noCenterTitle": "Vous n'êtes encore rattaché à aucun centre.",
+    "noCenterSubtitle": "Créez votre propre centre ou rejoignez un centre existant.",
+    "createCenter": "Créer mon centre",
+    "createCenterFormTitle": "Créer un centre de A à Z",
+    "saveCenter": "Enregistrer le centre",
+    "noCentersAvailable": "Aucun centre disponible"
   },
   "courses": {
     "title": "Cours",
@@ -208,17 +240,17 @@
     "confirm": "Confirmer"
   },
   "center_owner": {
-    "myOrganization": "Mon organisation",
+    "myOrganization": "Mon centre",
     "dashboardTitle": "Tableau de bord",
-    "noActiveOrganization": "Aucune organisation active.",
+    "noActiveOrganization": "Aucun centre actif.",
     "tutorsCount": "Tuteurs",
     "learnersCount": "Apprenants",
     "coursesCount": "Cours",
     "revenue": "Revenus",
-    "manageTutorsTitle": "Gestion des tuteurs",
-    "manageTutorsSubtitle": "Tuteurs de votre organisation (mock).",
-    "manageLearnersTitle": "Gestion des apprenants",
-    "manageLearnersSubtitle": "Apprenants de votre organisation (mock).",
+    "manageTutorsTitle": "Gestion des tuteurs du centre",
+    "manageTutorsSubtitle": "Tuteurs de votre centre (mock).",
+    "manageLearnersTitle": "Gestion des apprenants du centre",
+    "manageLearnersSubtitle": "Apprenants de votre centre (mock).",
     "settingsTitle": "Paramètres du centre",
     "orgName": "Nom",
     "orgDescription": "Description"
@@ -232,7 +264,8 @@
     "send": "Envoyer",
     "online": "En ligne",
     "offline": "Hors ligne",
-    "noMessages": "Aucun message. Commencez la conversation !"
+    "noMessages": "Aucun message. Commencez la conversation !",
+    "messageLearner": "Écrire à l’apprenant"
   },
   "calendar": {
     "title": "Agenda",
@@ -252,7 +285,8 @@
     "copyToOtherDays": "Copier vers autres jours",
     "addTimeRange": "Ajouter une plage horaire",
     "dayInactive": "Jour non disponible",
-    "copyConfirm": "Copier ces plages vers tous les autres jours actifs ?"
+    "copyConfirm": "Copier ces plages vers tous les autres jours actifs ?",
+    "copyTitle": "Copier les plages horaires"
   },
   "teacherPages": {
     "profileTitle": "Mon profil public",
@@ -296,7 +330,8 @@
     "centerTutors": "Tuteurs du centre",
     "noTutors": "Aucun tuteur pour ce centre",
     "switchToTeachers": "Voir les tuteurs",
-    "backToClasses": "Voir les classes et tarifs"
+    "backToClasses": "Voir les classes et tarifs",
+    "noCity": "Ville non renseignée"
   },
   "learner": {
     "myCenter": "Mon centre",
@@ -355,7 +390,8 @@
     "atLeastTwoAnswers": "Chaque question doit avoir au moins 2 réponses",
     "atLeastOneCorrectAnswer": "Chaque question doit avoir au moins une réponse correcte",
     "answerTextRequired": "Toutes les réponses doivent avoir un texte",
-    "selectAtLeastOneLearner": "Sélectionnez au moins un apprenant"
+    "selectAtLeastOneLearner": "Sélectionnez au moins un apprenant",
+    "noEligibleLearnersTooltip": "Aucun apprenant avec réservation en cours pour le moment"
   },
   "notifications": {
     "title": "Notifications",
@@ -381,7 +417,11 @@
     "videoCall": "Visioconférence",
     "videoCallNote": "Simulation UI uniquement - Pas de connexion réelle",
     "myCenter": "Mon centre",
+    "myCenterSubtitle": "Gérez les informations visibles sur votre centre : nom, description, matières et langues.",
     "centerName": "Nom du centre",
+    "centerLogo": "Logo du centre",
+    "changeCenterLogo": "Changer le logo",
+    "removeCenterLogo": "Supprimer le logo",
     "requiredLanguages": "Langues parlées exigées"
   }
 }

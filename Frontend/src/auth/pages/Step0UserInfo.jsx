@@ -85,23 +85,16 @@ export default function Step0UserInfo({ data, setData, onNext }) {
 
       {/* Actions bas de step */}
       <div className="flex justify-between items-center pt-4">
-         
         <button
           onClick={handleGoToLogin}
           className="text-sm text-black/60 hover:text-primary transition"
         >
-            Vous avez déjà un compte ?
+          Vous avez déjà un compte ?
           <span className="ml-1 font-semibold text-primary">
             Se connecter
           </span>
         </button>
-
-        {/* Bouton continuer */}
-        <Button
-          variant="primary"
-          onClick={onNext}
-          className="rounded"
-        >
+        <Button variant="primary" onClick={onNext} className="rounded">
           {t("signup.continue")}
         </Button>
       </div>

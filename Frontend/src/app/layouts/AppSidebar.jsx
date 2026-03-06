@@ -20,8 +20,8 @@ export const AppSidebar = ({ menu = [], actions = [] }) => {
   const { t } = useTranslation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleLogoutConfirm = () => {
-    logout();
+  const handleLogoutConfirm = async () => {
+    await logout();
     setShowLogoutConfirm(false);
     navigate("/");
   };

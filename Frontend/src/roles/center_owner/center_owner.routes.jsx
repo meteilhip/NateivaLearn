@@ -4,14 +4,14 @@ import { ROLES } from "../../shared/utils/roles";
 import { AppLayout } from "../../app/layouts/AppLayout";
 import { centerOwnerMenu, centerOwnerActions } from "./center_owner.menu";
 import { CenterOwnerOverview } from "./pages/CenterOwnerOverview";
-import { CenterOwnerTutorsManagement } from "./pages/CenterOwnerTutorsManagement";
-import { CenterOwnerLearnersManagement } from "./pages/CenterOwnerLearnersManagement";
+import { CenterOwnerCenter } from "./pages/CenterOwnerCenter";
 import { CenterOwnerSettings } from "./pages/CenterOwnerSettings";
 import { CenterOwnerProfile } from "./pages/CenterOwnerProfile";
 import { CenterOwnerChat } from "./pages/CenterOwnerChat";
 import { CenterAgendaView } from "./pages/CenterAgendaView";
 import { VideoCallLayout } from "./pages/VideoCallLayout";
 import { TutorBookings } from "../tutor/pages/TutorBookings";
+import { AvailabilityManager } from "../tutor/pages/AvailabilityManager";
 
 /**
  * Routes center_owner.
@@ -27,8 +27,8 @@ export const CenterOwnerRoutes = () => (
       }
     >
       <Route path="dashboard" element={<CenterOwnerOverview />} />
-      <Route path="tutors" element={<CenterOwnerTutorsManagement />} />
-      <Route path="learners" element={<CenterOwnerLearnersManagement />} />
+      <Route path="availability" element={<AvailabilityManager />} />
+      <Route path="center" element={<CenterOwnerCenter />} />
       <Route path="chat" element={<CenterOwnerChat />} />
       <Route path="agenda" element={<CenterAgendaView />} />
       <Route path="video" element={<VideoCallLayout />} />

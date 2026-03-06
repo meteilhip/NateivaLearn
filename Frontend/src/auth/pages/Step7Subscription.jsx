@@ -14,7 +14,7 @@ import { Button } from "../../shared/ui/Button";
  * - onNext : callback pour continuer l’inscription
  * - onBack : callback pour revenir à l’étape précédente
  */
-export default function Step7Subscription({ data, setData, onNext, onBack }) {
+export default function Step7Subscription({ data, setData, onNext, onBack, onSkip }) {
   const { t } = useTranslation();
 
   // 🔹 Plans disponibles : Jour / Semaine / Mois / Trimestre / Année
@@ -116,17 +116,24 @@ export default function Step7Subscription({ data, setData, onNext, onBack }) {
           ← {t("signup.back")}
         </Button>
 
-        <Button
-          className="rounded"
-          onClick={() => {
-            if (!selectedPlan) return;
-            setData({ ...data, subscription: selectedPlan });
-            onNext();
-          }}
-          disabled={!selectedPlan}
-        >
-          {t("signup.continue")}
-        </Button>
+        <div className="flex gap-3">
+          {onSkip && (
+            <Button variant="outline" className="rounded" onClick={onSkip}>
+              {t("signup.skip")}
+            </Button>
+          )}
+          <Button
+            className="rounded"
+            onClick={() => {
+              if (!selectedPlan) return;
+              setData({ ...data, subscription: selectedPlan });
+              onNext();
+            }}
+            disabled={!selectedPlan}
+          >
+            {t("signup.continue")}
+          </Button>
+        </div>
       </div>
     </motion.div>
   );

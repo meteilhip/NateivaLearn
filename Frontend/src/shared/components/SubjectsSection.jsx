@@ -14,6 +14,7 @@ export const SubjectsSection = ({ subjects = [], onChange }) => {
   const { t } = useTranslation();
   const [newSubject, setNewSubject] = useState("");
   const [showAddInput, setShowAddInput] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const commonSubjects = [
     "Mathématiques",
@@ -41,12 +42,27 @@ export const SubjectsSection = ({ subjects = [], onChange }) => {
     onChange(subjects.filter((s) => s !== subjectToRemove));
   };
 
+  const filteredCommonSubjects = commonSubjects
+    .filter((s) => !subjects.includes(s))
+    .filter((s) => s.toLowerCase().includes(searchTerm.toLowerCase()));
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-semibold text-dark/60 uppercase tracking-wider">
-          {t("tutor.subjects", "Matières enseignées")}
-        </label>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-dark/60 uppercase tracking-wider">
+            {t("tutor.subjects", "Matières enseignées")}
+          </label>
+        </div>
+        <div className="max-w-xs">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={t("signup.searchSubject")}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
       </div>
 
       {/* Liste des matières actuelles */}
@@ -127,19 +143,16 @@ export const SubjectsSection = ({ subjects = [], onChange }) => {
 
               {/* Suggestions de matières communes */}
               <div className="flex flex-wrap gap-2">
-                {commonSubjects
-                  .filter((s) => !subjects.includes(s))
-                  .slice(0, 6)
-                  .map((subject) => (
-                    <button
-                      key={subject}
-                      type="button"
-                      onClick={() => handleAddSubject(subject)}
-                      className="px-3 py-1 bg-gray-100 text-dark rounded-full text-sm hover:bg-gray-200 transition"
-                    >
-                      + {subject}
-                    </button>
-                  ))}
+                {filteredCommonSubjects.slice(0, 6).map((subject) => (
+                  <button
+                    key={subject}
+                    type="button"
+                    onClick={() => handleAddSubject(subject)}
+                    className="px-3 py-1 bg-gray-100 text-dark rounded-full text-sm hover:bg-gray-200 transition"
+                  >
+                    + {subject}
+                  </button>
+                ))}
               </div>
             </div>
           )}

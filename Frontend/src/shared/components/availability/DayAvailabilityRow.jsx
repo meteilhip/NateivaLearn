@@ -20,6 +20,12 @@ export const DayAvailabilityRow = ({ day, dayName, timeRanges, isActive, onToggl
 
   const handleRemoveTimeRange = (index) => {
     const newRanges = timeRanges.filter((_, i) => i !== index);
+
+    // Si on supprime la dernière plage, le jour devient inactif
+    if (newRanges.length === 0) {
+      onToggle(false);
+    }
+
     onChange(newRanges);
   };
 
@@ -66,7 +72,7 @@ export const DayAvailabilityRow = ({ day, dayName, timeRanges, isActive, onToggl
               start={range.start}
               end={range.end}
               onChange={(newStart, newEnd) => handleTimeRangeChange(index, newStart, newEnd)}
-              onRemove={timeRanges.length > 1 ? () => handleRemoveTimeRange(index) : null}
+              onRemove={() => handleRemoveTimeRange(index)}
             />
           ))}
 

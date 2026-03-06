@@ -18,7 +18,7 @@ import coursesData from "../../data/courses";
  * Step5Subjects
  * Étape 5 du signup : sélection d'une ou plusieurs matières
  */
-export default function Step5Subjects({ data, setData, onNext, onBack }) {
+export default function Step5Subjects({ data, setData, onNext, onBack, onSkip }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
 
@@ -104,18 +104,20 @@ export default function Step5Subjects({ data, setData, onNext, onBack }) {
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between">
-        <Button variant="outline" className="rounded" onClick={onBack}>
-          ← {t("signup.back")}
-        </Button>
-
-        <Button
-          onClick={onNext}
-          className="rounded"
-          disabled={!data.subjects.length}
-        >
-          {t("signup.continue")}
-        </Button>
+      <div className="flex flex-col gap-3">
+        <div className="flex justify-between">
+          <Button variant="outline" className="rounded" onClick={onBack}>
+            ← {t("signup.back")}
+          </Button>
+          <Button onClick={onNext} className="rounded" disabled={!data.subjects.length}>
+            {t("signup.continue")}
+          </Button>
+        </div>
+        {onSkip && (
+          <Button variant="outline" onClick={onSkip} className="rounded w-full text-black/60">
+            {t("signup.skip")}
+          </Button>
+        )}
       </div>
     </motion.div>
   );

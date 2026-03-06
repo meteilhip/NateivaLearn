@@ -1,5 +1,5 @@
 // src/roles/tutor/pages/TutorAvailability.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useCoursesStore } from "../../../app/store/courses.store";
@@ -29,9 +29,13 @@ const DAYS = [
  */
 export const TutorAvailability = () => {
   const { t } = useTranslation();
-  const { weeklyAvailability, blockedDates, addBlockedDate, removeBlockedDate } = useCoursesStore();
+  const { weeklyAvailability, blockedDates, addBlockedDate, removeBlockedDate, fetchAvailability } = useCoursesStore();
 
   const [newBlockedDate, setNewBlockedDate] = useState("");
+
+  useEffect(() => {
+    fetchAvailability();
+  }, [fetchAvailability]);
 
   const handleAddBlocked = () => {
     if (newBlockedDate) {
