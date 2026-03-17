@@ -6,6 +6,7 @@ import { FaBrain } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../app/store/auth.store";
 import { useCoursesStore } from "../../../app/store/courses.store";
+import { useNotificationsStore } from "../../../app/store/notifications.store";
 import { BookingStatusBadge } from "../../../shared/ui/BookingStatusBadge";
 import { Button } from "../../../shared/ui/Button";
 import { CreateQuizModal } from "../../../shared/components/quiz/CreateQuizModal";
@@ -28,7 +29,8 @@ export const TutorBookings = () => {
   const user = useAuthStore((state) => state.user);
   const tutorId = user?.teacherId || user?.id || user?.email || "t1";
   const tutorName = user?.name || "Tuteur";
-  const { bookings, setBookingsForTutor, completeBooking } = useCoursesStore();
+  const { bookings, setBookingsForTutor, completeBooking, confirmBooking, cancelBooking } = useCoursesStore();
+  const fetchNotifications = useNotificationsStore((s) => s.fetchNotifications);
   const [createQuizModalOpen, setCreateQuizModalOpen] = useState(false);
 
   useEffect(() => {
@@ -62,6 +64,7 @@ export const TutorBookings = () => {
     return Array.from(byLearner.values());
   }, [bookings]);
 
+  const pendingRequests = bookings.filter((b) => b.status === "pending");
   const upcoming = bookings.filter(
     (b) => ["pending", "confirmed"].includes(b.status) && new Date(b.startTime) > new Date()
   );
@@ -71,6 +74,15 @@ export const TutorBookings = () => {
 
   const formatDate = (iso) =>
     new Date(iso).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+  const handleConfirm = async (bookingId) => {
+    await confirmBooking(bookingId);
+    fetchNotifications?.();
+  };
+  const handleRefuse = async (bookingId) => {
+    await cancelBooking(bookingId);
+    fetchNotifications?.();
+  };
 
   const handleMessageLearner = async (learnerId) => {
     if (!learnerId) return;
@@ -113,13 +125,63 @@ export const TutorBookings = () => {
         </Button>
       </div>
 
+      {/* Demandes en attente : confirmer ou refuser */}
+      {pendingRequests.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold text-dark mb-3 flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-amber-500" />
+            {t("teacherPages.pendingRequests", "Demandes en attente")}
+          </h2>
+          <div className="space-y-3">
+            {pendingRequests.map((b) => (
+              <motion.div
+                key={b.id}
+                layout
+                className="bg-amber-50/80 border border-amber-200 rounded-lg p-4 shadow-sm flex flex-wrap items-center justify-between gap-4"
+              >
+                <div>
+                  <p className="font-medium text-dark">
+                    {b.learnerName || `Apprenant (ID: ${b.learnerId})`} – {b.subject || t("courses.lesson")}
+                  </p>
+                  <p className="text-sm text-dark/60">{formatDate(b.startTime)}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <BookingStatusBadge status={b.status} />
+                  <Button
+                    variant="primary"
+                    className="rounded text-sm"
+                    onClick={() => handleConfirm(b.id)}
+                  >
+                    {t("teacherPages.confirmBooking", "Confirmer")}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    className="rounded text-sm"
+                    onClick={() => handleRefuse(b.id)}
+                  >
+                    {t("teacherPages.refuseBooking", "Refuser")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="rounded text-xs"
+                    onClick={() => handleMessageLearner(b.learnerId)}
+                  >
+                    {t("chat.messageLearner", "Écrire à l'apprenant")}
+                  </Button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section>
         <h2 className="text-lg font-semibold text-dark mb-3">{t("courses.upcoming")}</h2>
         <div className="space-y-3">
           {upcoming.length === 0 ? (
             <p className="text-dark/60 text-sm">{t("courses.noUpcoming")}</p>
           ) : (
-            upcoming.map((b) => (
+            upcoming.filter((b) => b.status !== "pending").map((b) => (
               <motion.div
                 key={b.id}
                 layout
@@ -127,11 +189,11 @@ export const TutorBookings = () => {
               >
                 <div>
                   <p className="font-medium text-dark">
-                    Apprenant (ID: {b.learnerId}) – {b.subject}
+                    {b.learnerName || `Apprenant (ID: ${b.learnerId})`} – {b.subject || t("courses.lesson")}
                   </p>
                   <p className="text-sm text-dark/60">{formatDate(b.startTime)}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <BookingStatusBadge status={b.status} />
                   {b.status === "confirmed" && (
                     <Button
@@ -166,16 +228,26 @@ export const TutorBookings = () => {
               <motion.div
                 key={b.id}
                 layout
-                className="bg-white rounded-lg p-4 shadow-sm flex flex-wrap items-center justify-between gap-4 opacity-90"
+                className={`rounded-lg p-4 shadow-sm flex flex-wrap items-center justify-between gap-4 opacity-90 ${b.status === "pending" ? "bg-amber-50/80 border border-amber-200" : "bg-white"}`}
               >
                 <div>
                   <p className="font-medium text-dark">
-                    Apprenant (ID: {b.learnerId}) – {b.subject}
+                    {b.learnerName || `Apprenant (ID: ${b.learnerId})`} – {b.subject || t("courses.lesson")}
                   </p>
                   <p className="text-sm text-dark/60">{formatDate(b.startTime)}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <BookingStatusBadge status={b.status} />
+                  {b.status === "pending" && (
+                    <>
+                      <Button variant="primary" className="rounded text-sm" onClick={() => handleConfirm(b.id)}>
+                        {t("teacherPages.confirmBooking", "Confirmer")}
+                      </Button>
+                      <Button variant="danger" className="rounded text-sm" onClick={() => handleRefuse(b.id)}>
+                        {t("teacherPages.refuseBooking", "Refuser")}
+                      </Button>
+                    </>
+                  )}
                   <Button
                     variant="outline"
                     className="rounded text-xs"

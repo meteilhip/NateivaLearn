@@ -11,6 +11,8 @@ import { Button } from "../../../shared/ui/Button";
  */
 export const LearnerRequestCard = ({ learner, onAccept, onReject, onRemove, isMember = false }) => {
   const { t } = useTranslation();
+  const name = learner.user?.name ?? learner.name ?? "-";
+  const email = learner.user?.email ?? learner.email ?? "-";
 
   return (
     <motion.div
@@ -21,15 +23,15 @@ export const LearnerRequestCard = ({ learner, onAccept, onReject, onRemove, isMe
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <img
-          src={learner.avatar || "/placeholder-avatar.png"}
-          alt={learner.name}
+          src={learner.avatar || "/9581121.png"}
+          alt={name}
           className="w-16 h-16 rounded-full object-cover"
         />
 
         {/* Infos */}
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-dark mb-1">{learner.name}</h3>
-          <p className="text-sm text-dark/60 mb-2">{learner.email}</p>
+          <h3 className="text-lg font-semibold text-dark mb-1">{name}</h3>
+          <p className="text-sm text-dark/60 mb-2">{email}</p>
           
           {learner.level && (
             <p className="text-sm text-dark/60 mb-2">

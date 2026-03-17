@@ -17,6 +17,7 @@ class User extends Authenticatable
         'email',
         'phone',
         'city',
+        'country',
         'password',
         'role',
         'active_organization_id',

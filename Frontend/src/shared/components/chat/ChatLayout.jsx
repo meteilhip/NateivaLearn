@@ -13,7 +13,7 @@ import { useAuthStore } from "../../../app/store/auth.store";
  * Affiche la liste des conversations et la fenêtre de chat.
  */
 export const ChatLayout = () => {
-  const { conversations, getMessages, sendMessage, markAsRead, setCurrentUserId, fetchConversations } = useChatStore();
+  const { conversations, getMessages, sendMessage, markAsRead, setCurrentUserId, fetchConversations, fetchMessagesForConversation } = useChatStore();
   const user = useAuthStore((state) => state.user);
   const userId = user?.id || user?.email;
   const location = useLocation();
@@ -29,22 +29,20 @@ export const ChatLayout = () => {
 
   const [selectedConversationId, setSelectedConversationId] = useState(null);
 
-  // Sélection initiale éventuelle (ex: depuis une réservation "Écrire un message")
+  // Sélection initiale (ex: depuis "Écrire à l'apprenant") dès que les conversations sont chargées
   useEffect(() => {
-    if (!selectedConversationId && initialConversationId && conversations.length > 0) {
-      const exists = conversations.some((c) => String(c.id) === String(initialConversationId));
-      if (exists) {
-        setSelectedConversationId(initialConversationId);
-      }
-    }
+    if (!initialConversationId || selectedConversationId) return;
+    const found = conversations.find((c) => String(c.id) === String(initialConversationId));
+    if (found) setSelectedConversationId(found.id);
   }, [initialConversationId, conversations, selectedConversationId]);
 
-  // Marquer comme lu quand on sélectionne une conversation
+  // Charger les messages et marquer comme lu quand on sélectionne une conversation
   useEffect(() => {
     if (selectedConversationId) {
       markAsRead(selectedConversationId);
+      fetchMessagesForConversation(selectedConversationId);
     }
-  }, [selectedConversationId, markAsRead]);
+  }, [selectedConversationId, markAsRead, fetchMessagesForConversation]);
 
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
   const conversationMessages = selectedConversationId

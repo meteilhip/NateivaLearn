@@ -29,25 +29,47 @@ export const LearnerCalendar = () => {
 
   useEffect(() => { setBookingsForLearner(learnerId); }, [learnerId, setBookingsForLearner]);
 
+  // Backend renvoie déjà les réservations du learner connecté
   const myBookings = useMemo(
-    () => bookings.filter((b) => b.learnerId === learnerId && ["pending", "confirmed"].includes(b.status)),
-    [bookings, learnerId]
+    () => bookings.filter((b) => ["pending", "confirmed"].includes(b.status)),
+    [bookings]
   );
 
   const upcomingBookings = useMemo(
-    () => myBookings.filter((b) => new Date(b.startTime) >= new Date()).sort((a, b) => new Date(a.startTime) - new Date(b.startTime)),
+    () =>
+      myBookings
+        .filter((b) => b.startTime && !Number.isNaN(new Date(b.startTime).getTime()) && new Date(b.startTime) >= new Date())
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime)),
     [myBookings]
   );
+
+  const getDateKey = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
 
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; }), [weekStart]);
 
   const bookingsByDay = useMemo(() => {
     const map = {};
-    weekDays.forEach((d) => { const key = d.toISOString().slice(0, 10); map[key] = myBookings.filter((b) => b.startTime.slice(0, 10) === key); });
+    weekDays.forEach((d) => {
+      const key = d.toISOString().slice(0, 10);
+      map[key] = myBookings.filter((b) => b.startTime && getDateKey(b.startTime) === key);
+    });
     return map;
   }, [weekDays, myBookings]);
 
-  const formatTime = (iso) => new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const formatTime = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  };
 
   const goPrevWeek = () => setWeekStart((d) => { const next = new Date(d); next.setDate(next.getDate() - 7); return next; });
   const goNextWeek = () => setWeekStart((d) => { const next = new Date(d); next.setDate(next.getDate() + 7); return next; });
@@ -78,7 +100,7 @@ export const LearnerCalendar = () => {
       <h1 className="text-2xl font-bold text-dark">{t("calendar.title")}</h1>
       <section>
         <h2 className="text-lg font-semibold text-dark mb-3 flex items-center gap-2">
-          <FaCalendarAlt className="text-primary" /> {t("calendar.upcomingLessons")}
+          <FaCalendarAlt className="text-primary" /> {t("calendar.upcomingLessons", "Prochains cours")}
         </h2>
         <div className="space-y-3">
           {upcomingBookings.length === 0 ? <p className="text-dark/60 text-sm">{t("courses.noUpcoming")}</p> : (
@@ -87,8 +109,12 @@ export const LearnerCalendar = () => {
                 <div className="flex items-center gap-3">
                   <div className="text-primary"><FaCalendarAlt size={20} /></div>
                   <div>
-                    <p className="font-medium text-dark">{b.tutorName} – {b.subject}</p>
-                    <p className="text-sm text-dark/60">{new Date(b.startTime).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} à {formatTime(b.startTime)}</p>
+                    <p className="font-medium text-dark">{b.tutorName || t("courses.tutor", "Tuteur")} – {b.subject || t("courses.lesson", "Cours")}</p>
+                    <p className="text-sm text-dark/60">
+                      {b.startTime && !Number.isNaN(new Date(b.startTime).getTime())
+                        ? `${new Date(b.startTime).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} à ${formatTime(b.startTime)}`
+                        : "—"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -108,7 +134,7 @@ export const LearnerCalendar = () => {
       </section>
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-dark">{t("calendar.week")}</h2>
+          <h2 className="text-lg font-semibold text-dark">{t("calendar.week", "Semaine")}</h2>
           <div className="flex gap-2">
             <Button variant="outline" className="rounded text-sm" onClick={goPrevWeek}>←</Button>
             <Button variant="outline" className="rounded text-sm" onClick={goNextWeek}>→</Button>
@@ -120,8 +146,8 @@ export const LearnerCalendar = () => {
               <p className="text-xs font-medium text-dark/70">{dayNames[d.getDay()]} {d.getDate()}</p>
               <div className="mt-2 space-y-1">
                 {(bookingsByDay[d.toISOString().slice(0, 10)] || []).map((b) => (
-                  <div key={b.id} className="text-xs bg-primary/10 text-primary rounded px-2 py-1 truncate" title={`${b.tutorName} ${formatTime(b.startTime)}`}>
-                    {formatTime(b.startTime)} {b.tutorName}
+                  <div key={b.id} className="text-xs bg-primary/10 text-primary rounded px-2 py-1 truncate" title={`${b.tutorName || t("courses.tutor", "Tuteur")} ${formatTime(b.startTime)}`}>
+                    {formatTime(b.startTime)} {b.tutorName || t("courses.tutor", "Tuteur")}
                   </div>
                 ))}
               </div>

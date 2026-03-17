@@ -7,3 +7,4 @@ Route::get('/notifications', [NotificationController::class, 'index']);
 Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
 Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
 Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);

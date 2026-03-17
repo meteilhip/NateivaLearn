@@ -21,7 +21,7 @@ export const TutorRequestCard = ({ tutor, onAccept, onReject, onRemove, isMember
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <img
-          src={tutor.avatar || "/placeholder-avatar.png"}
+          src={tutor.avatar || "/9581121.png"}
           alt={tutor.name}
           className="w-16 h-16 rounded-full object-cover"
         />

@@ -8,14 +8,27 @@ const PREFIX = "/api/organizations";
 
 export const organizationService = {
   async list() {
-    const { data } = await api(PREFIX);
-    return data ?? [];
+    const res = await api(PREFIX);
+    if (!res) return [];
+    const data = res.data ?? res;
+    const list = Array.isArray(data) ? data : (data?.data && Array.isArray(data.data) ? data.data : []);
+    return list;
   },
 
   async discover(params = {}) {
-    const q = new URLSearchParams(params).toString();
-    const { data } = await api(`${PREFIX}/discover${q ? `?${q}` : ""}`);
-    return data ?? [];
+    const clean = {};
+    if (params.city != null && params.city !== "" && params.city !== "undefined") {
+      clean.city = params.city;
+    }
+    if (params.country != null && params.country !== "" && params.country !== "undefined") {
+      clean.country = params.country;
+    }
+    const q = Object.keys(clean).length ? new URLSearchParams(clean).toString() : "";
+    const res = await api(`${PREFIX}/discover${q ? `?${q}` : ""}`);
+    if (!res) return [];
+    const data = res.data ?? res;
+    const list = Array.isArray(data) ? data : (data?.data && Array.isArray(data.data) ? data.data : []);
+    return list;
   },
 
   async create(payload) {
@@ -24,6 +37,7 @@ export const organizationService = {
       body: {
         name: payload.name,
         city: payload.city || null,
+        country: payload.country ?? null,
         description: payload.description || null,
         logo: payload.logo ?? null,
         required_languages: payload.required_languages ?? null,
@@ -42,6 +56,7 @@ export const organizationService = {
     const body = {};
     if (payload.name !== undefined) body.name = payload.name;
     if (payload.city !== undefined) body.city = payload.city;
+    if (payload.country !== undefined) body.country = payload.country;
     if (payload.description !== undefined) body.description = payload.description;
     if (payload.logo !== undefined) body.logo = payload.logo;
     if (payload.required_languages !== undefined) body.required_languages = payload.required_languages;

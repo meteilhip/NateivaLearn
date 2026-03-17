@@ -1,9 +1,11 @@
 // src/roles/learner/pages/BookingPage.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 import { useCoursesStore } from "../../../app/store/courses.store";
 import { useAuthStore } from "../../../app/store/auth.store";
+import { useNotificationsStore } from "../../../app/store/notifications.store";
 import { TutorBookingInfo } from "../../../shared/components/booking/TutorBookingInfo";
 import { BookingCalendar } from "../../../shared/components/booking/BookingCalendar";
 import { BookingSummary } from "../../../shared/components/booking/BookingSummary";
@@ -19,7 +21,15 @@ export const BookingPage = () => {
   const { t } = useTranslation();
   const { tutorId } = useParams();
   const navigate = useNavigate();
-  const { tutors, createBooking, confirmBooking } = useCoursesStore();
+  const {
+    tutors,
+    createBooking,
+    confirmBooking,
+    fetchAvailabilityForTutor,
+    fetchBookings,
+    availabilityByTutorId,
+  } = useCoursesStore();
+  const fetchNotifications = useNotificationsStore((s) => s.fetchNotifications);
   const user = useAuthStore((state) => state.user);
   const learnerId = user?.id || user?.email || "learner-1";
 
@@ -28,7 +38,27 @@ export const BookingPage = () => {
   const [paymentSimulated, setPaymentSimulated] = useState(false);
 
   // Trouver le tutor
-  const tutor = tutors.find((t) => t.id === tutorId);
+  const tutor = useMemo(
+    () => tutors.find((t) => String(t.id) === String(tutorId)),
+    [tutors, tutorId]
+  );
+
+  // Charger ses disponibilités depuis l'API et les injecter dans le tutor passé au calendrier
+  const availabilitySlots = useMemo(
+    () => (tutor ? availabilityByTutorId[tutor.id] || [] : []),
+    [availabilityByTutorId, tutor]
+  );
+
+  const calendarTutor = useMemo(
+    () => (tutor ? { ...tutor, availabilitySlots } : null),
+    [tutor, availabilitySlots]
+  );
+
+  useEffect(() => {
+    if (tutor) {
+      fetchAvailabilityForTutor?.(tutor.id);
+    }
+  }, [tutor, fetchAvailabilityForTutor]);
 
   useEffect(() => {
     if (!tutor) {
@@ -37,7 +67,7 @@ export const BookingPage = () => {
     }
   }, [tutor, navigate]);
 
-  const handleConfirm = ({ useSubscription }) => {
+  const handleConfirm = async ({ useSubscription }) => {
     if (!tutor || !selectedDate || !selectedSlot) return;
 
     const start = new Date(selectedDate);
@@ -45,35 +75,51 @@ export const BookingPage = () => {
     const end = new Date(selectedDate);
     end.setHours(Math.floor(selectedSlot.end / 60), selectedSlot.end % 60, 0, 0);
 
-    // Créer la réservation
-    const booking = createBooking({
+    const pad = (n) => String(n).padStart(2, "0");
+    const dateStr = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
+    const startTimeStr = `${pad(start.getHours())}:${pad(start.getMinutes())}`;
+    const endTimeStr = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+
+    const booking = await createBooking({
       learnerId,
       tutorId: tutor.id,
       tutorName: tutor.name,
       tutorAvatar: tutor.avatar,
       subject: tutor.subjects?.[0] || "",
-      startTime: start.toISOString(),
-      endTime: end.toISOString(),
+      date: dateStr,
+      startTime: startTimeStr,
+      endTime: endTimeStr,
       price: tutor.pricePerHour,
     });
 
-    // Simuler le paiement si nécessaire
+    if (!booking || booking.error) {
+      const msg = booking?.error;
+      const message = typeof msg === "string"
+        ? msg
+        : booking?.errors && typeof booking.errors === "object"
+          ? Object.values(booking.errors).flat().filter(Boolean).join(" ") || t("booking.error", "Impossible de créer la réservation")
+          : t("booking.error", "Impossible de créer la réservation");
+      toast.error(message);
+      return;
+    }
+
     if (!useSubscription) {
+      // Paiement supposé effectué : demande envoyée au tuteur (statut pending)
       setPaymentSimulated(true);
+      toast.success(
+        t("booking.paymentAndRequestSent", "Paiement effectué. Votre demande de réservation a été envoyée au tuteur.")
+      );
+      fetchNotifications?.();
+      fetchBookings?.();
       setTimeout(() => {
-        confirmBooking(booking.id);
         setPaymentSimulated(false);
-        // Rediriger vers la page des cours après confirmation
-        setTimeout(() => {
-          navigate("/learner/courses");
-        }, 1000);
-      }, 800);
-    } else {
-      // Utiliser l'abonnement (simulation)
-      confirmBooking(booking.id);
-      setTimeout(() => {
         navigate("/learner/courses");
-      }, 500);
+      }, 1500);
+    } else {
+      // Utiliser l'abonnement (simulation) : confirmation directe
+      confirmBooking(booking.id);
+      fetchNotifications?.();
+      setTimeout(() => navigate("/learner/courses"), 500);
     }
   };
 
@@ -118,7 +164,7 @@ export const BookingPage = () => {
           transition={{ delay: 0.2 }}
         >
           <BookingCalendar
-            tutor={tutor}
+            tutor={calendarTutor}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
             selectedSlot={selectedSlot}

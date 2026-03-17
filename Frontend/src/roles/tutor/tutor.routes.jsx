@@ -11,6 +11,7 @@ import { TutorCalendar } from "./pages/TutorCalendar";
 import { TutorVideo } from "./pages/TutorVideo";
 import { TutorSettings } from "./pages/TutorSettings";
 import { TutorChat } from "./pages/TutorChat";
+import { LibraryPage } from "../../shared/pages/LibraryPage";
 import { TutorCenter } from "./pages/TutorCenter";
 
 export const TutorRoutes = () => (
@@ -31,6 +32,7 @@ export const TutorRoutes = () => (
       <Route path="calendar" element={<TutorCalendar />} />
       <Route path="video" element={<TutorVideo />} />
       <Route path="settings" element={<TutorSettings />} />
+      <Route path="library" element={<LibraryPage />} />
     </Route>
   </Routes>
 );

@@ -20,7 +20,7 @@ export const TutorBookingInfo = ({ tutor }) => {
       {/* Photo */}
       <div className="flex justify-center mb-4">
         <img
-          src={tutor.avatar || "/placeholder-avatar.png"}
+          src={tutor.avatar || "/9581121.png"}
           alt={tutor.name}
           className="w-24 h-24 rounded-full object-cover"
         />

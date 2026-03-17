@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ApiController;
 use App\Modules\Bookings\Models\Booking;
 use App\Modules\Bookings\Requests\StoreBookingRequest;
 use App\Modules\Bookings\Services\BookingService;
+use App\Modules\Notifications\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -38,7 +39,7 @@ class BookingController extends ApiController
             return $this->error('Conflit horaire', 422);
         }
         $booking = DB::transaction(function () use ($request, $data) {
-            return Booking::query()->create([
+            $b = Booking::query()->create([
                 'learner_id' => $request->user()->id,
                 'tutor_id' => $data['tutor_id'],
                 'organization_id' => $data['organization_id'] ?? null,
@@ -48,8 +49,24 @@ class BookingController extends ApiController
                 'price' => $data['price'] ?? null,
                 'status' => 'pending',
             ]);
+            $b->load(['learner:id,name', 'tutor:id,name']);
+            $learnerName = $b->learner?->name ?? 'Un apprenant';
+            $dateStr = \Carbon\Carbon::parse($b->date)->locale('fr_FR')->translatedFormat('l j F Y');
+            $timeStr = $b->start_time;
+
+            Notification::query()->create([
+                'user_id' => $b->learner_id,
+                'title' => 'Réservation envoyée',
+                'body' => "Votre demande de réservation a été envoyée au tuteur. Vous serez notifié dès qu'il aura confirmé ou refusé.",
+            ]);
+            Notification::query()->create([
+                'user_id' => $b->tutor_id,
+                'title' => 'Nouvelle demande de réservation',
+                'body' => "{$learnerName} souhaite réserver un créneau le {$dateStr} à {$timeStr}. Confirmez ou refusez dans vos réservations.",
+            ]);
+            return $b;
         });
-        return $this->success($booking->load(['tutor:id,name,email', 'organization:id,name']), 201);
+        return $this->success($booking->load(['tutor:id,name,email', 'organization:id,name', 'learner:id,name']), 201);
     }
 
     public function show(Booking $booking): JsonResponse
@@ -71,6 +88,13 @@ class BookingController extends ApiController
             return $this->error('Forbidden', 403);
         }
         $booking->update(['status' => 'confirmed']);
+        $booking->load('learner:id,name');
+        $dateStr = \Carbon\Carbon::parse($booking->date)->locale('fr_FR')->translatedFormat('l j F Y');
+        Notification::query()->create([
+            'user_id' => $booking->learner_id,
+            'title' => 'Réservation confirmée',
+            'body' => "Le tuteur a confirmé votre réservation pour le {$dateStr} à {$booking->start_time}.",
+        ]);
         return $this->success($booking->fresh());
     }
 
@@ -90,6 +114,15 @@ class BookingController extends ApiController
             return $this->error('Forbidden', 403);
         }
         $booking->update(['status' => 'cancelled']);
+        if ($user->id === (int) $booking->tutor_id) {
+            $booking->load('learner:id,name');
+            $dateStr = \Carbon\Carbon::parse($booking->date)->locale('fr_FR')->translatedFormat('l j F Y');
+            Notification::query()->create([
+                'user_id' => $booking->learner_id,
+                'title' => 'Réservation refusée',
+                'body' => "Le tuteur a refusé votre demande de réservation pour le {$dateStr} à {$booking->start_time}.",
+            ]);
+        }
         return $this->success($booking->fresh());
     }
 }

@@ -250,9 +250,9 @@ export const TutorProfile = () => {
             multiline
           />
           
-          {/* Section Matières enseignées */}
           <div className="py-4 border-b border-black/5">
             <SubjectsSection
+              label={t("tutor.subjectsTaught", "Matière enseigné")}
               subjects={subjects}
               onChange={(nextSubjects) => {
                 setSubjects(nextSubjects);

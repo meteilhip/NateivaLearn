@@ -11,6 +11,7 @@ import { LearnerCalendar } from "./pages/LearnerCalendar";
 import { LearnerVideo } from "./pages/LearnerVideo";
 import { LearnerSettings } from "./pages/LearnerSettings";
 import { LearnerProfile } from "./pages/LearnerProfile";
+import { LibraryPage } from "../../shared/pages/LibraryPage";
 import { BookingPage } from "./pages/BookingPage";
 import { LearnerCenter } from "./pages/LearnerCenter";
 import { LearnerQuiz } from "./pages/LearnerQuiz";
@@ -33,6 +34,7 @@ export const LearnerRoutes = () => (
       <Route path="calendar" element={<LearnerCalendar />} />
       <Route path="video" element={<LearnerVideo />} />
       <Route path="settings" element={<LearnerSettings />} />
+      <Route path="library" element={<LibraryPage />} />
       <Route path="profile" element={<LearnerProfile />} />
     </Route>
   </Routes>

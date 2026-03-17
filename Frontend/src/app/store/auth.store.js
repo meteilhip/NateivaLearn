@@ -6,6 +6,7 @@ function normalizeUser(apiUser) {
   if (!apiUser) return null;
   return {
     ...apiUser,
+    avatar: apiUser.avatar ?? apiUser.photo ?? apiUser.photo_url ?? apiUser.profile_photo_url ?? null,
     activeOrganizationId: apiUser.active_organization_id ?? apiUser.activeOrganizationId,
   };
 }
@@ -48,6 +49,7 @@ export const useAuthStore = create((set, get) => ({
         email: data.email,
         phone: data.phone,
         city: data.city,
+        country: data.country,
         password: data.password,
         password_confirmation: data.password_confirmation ?? data.password,
         role: data.role || "learner",

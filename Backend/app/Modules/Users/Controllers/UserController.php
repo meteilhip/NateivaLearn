@@ -6,9 +6,33 @@ use App\Http\Controllers\Api\ApiController;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class UserController extends ApiController
 {
+    public function index(Request $request): JsonResponse
+    {
+        $currentUser = $request->user();
+
+        $query = User::query()
+            ->select(['id', 'name', 'email', 'role'])
+            ->where('id', '!=', $currentUser->id);
+
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query
+            ->orderBy('name')
+            ->limit(20)
+            ->get();
+
+        return $this->success($users);
+    }
+
     public function profile(): JsonResponse
     {
         $user = request()->user()->load(['activeOrganization', 'tutorProfile']);

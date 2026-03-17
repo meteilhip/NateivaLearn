@@ -9,10 +9,10 @@ import { Button } from "../../shared/ui/Button";
 
 /**
  * Step1CityAndNumber
- * Étape 1 du signup : récupération de la ville et du numéro de téléphone
+ * Étape 1 du signup : Localisation (ville, pays) et numéro de téléphone
  *
  * Props :
- * - data : objet contenant city et phone
+ * - data : objet contenant city, country et phone
  * - setData : fonction pour mettre à jour les données
  * - onNext : callback pour passer à l'étape suivante
  * - onBack : callback pour revenir à l'étape précédente
@@ -31,21 +31,30 @@ export default function Step1CityAndNumber({ data, setData, onNext, onBack }) {
     >
       {/* Titre avec icône */}
       <h1 className="text-3xl font-bold flex items-center gap-3">
-        {t("signup.cityAndPhone")}
+        {t("signup.locationAndPhone", "Localisation et numéro de téléphone")}
         <FiMapPin className="text-primary" size={32} />
       </h1>
 
       {/* Petite phrase d'introduction */}
       <p className="text-black/70 text-lg">
-        {t("signup.cityAndPhoneInfo")}
+        {t("signup.locationAndPhoneInfo", "Indiquez votre ville, votre pays et votre numéro de téléphone.")}
       </p>
 
       {/* Input ville */}
       <Input
         type="text"
-        placeholder={t("signup.city")}
+        placeholder={t("signup.city", "Ville")}
         value={data.city || ""}
         onChange={(e) => setData({ ...data, city: e.target.value })}
+        icon={FiMapPin}
+      />
+
+      {/* Input pays */}
+      <Input
+        type="text"
+        placeholder={t("signup.country", "Pays")}
+        value={data.country || ""}
+        onChange={(e) => setData({ ...data, country: e.target.value })}
         icon={FiMapPin}
       />
 

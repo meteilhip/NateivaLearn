@@ -16,8 +16,9 @@ class UpdateOrganizationRequest extends FormRequest
         return [
             'name' => ['sometimes', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
+            'country' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'logo' => ['nullable', 'string', 'max:65535'],
+            'logo' => ['nullable', 'string', 'max:2097152'], // base64 data URL (~2 Mo)
             'required_languages' => ['nullable', 'array'],
             'required_languages.*' => ['string', 'max:100'],
             'subjects' => ['nullable', 'array'],

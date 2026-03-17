@@ -40,8 +40,10 @@ export const CenterOwnerCenter = () => {
         className="bg-white rounded-xl shadow-sm p-6 space-y-2"
       >
         <h2 className="text-lg font-semibold text-dark">{activeOrganization.name}</h2>
-        {activeOrganization.city && (
-          <p className="text-sm text-dark/60">{activeOrganization.city}</p>
+        {(activeOrganization.city || activeOrganization.country) && (
+          <p className="text-sm text-dark/60">
+            {[activeOrganization.city, activeOrganization.country].filter(Boolean).join(", ")}
+          </p>
         )}
         {activeOrganization.description && (
           <p className="text-sm text-dark/70 mt-2">{activeOrganization.description}</p>

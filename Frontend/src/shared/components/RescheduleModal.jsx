@@ -1,10 +1,11 @@
 // src/shared/components/RescheduleModal.jsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiX } from "react-icons/fi";
 import { Button } from "../ui/Button";
 import { useBookingConflict } from "../hooks/useBookingConflict";
+import { useCoursesStore } from "../../app/store/courses.store";
 
 const DAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
@@ -16,8 +17,21 @@ const DAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
  */
 export const RescheduleModal = ({ booking, tutor, isOpen, onClose, onConfirm }) => {
   const { t } = useTranslation();
+  const { fetchAvailabilityForTutor, availabilityByTutorId } = useCoursesStore();
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
+
+  // Charger les disponibilités du tuteur si nécessaire
+  useEffect(() => {
+    if (tutor?.id) {
+      fetchAvailabilityForTutor?.(tutor.id);
+    }
+  }, [tutor?.id, fetchAvailabilityForTutor]);
+
+  const availabilitySlots = useMemo(
+    () => (tutor?.id ? availabilityByTutorId[tutor.id] || [] : []),
+    [availabilityByTutorId, tutor?.id]
+  );
 
   // Générer les dates disponibles (14 prochains jours)
   const availableDates = useMemo(() => {
@@ -32,10 +46,10 @@ export const RescheduleModal = ({ booking, tutor, isOpen, onClose, onConfirm }) 
 
   // Générer les créneaux pour le jour sélectionné
   const timeSlots = useMemo(() => {
-    if (!selectedDate || !tutor?.availabilitySlots) return [];
+    if (!selectedDate || !availabilitySlots) return [];
 
     const dayOfWeek = selectedDate.getDay();
-    const tutorSlots = tutor.availabilitySlots.filter((s) => s.day === dayOfWeek);
+    const tutorSlots = availabilitySlots.filter((s) => s.day === dayOfWeek);
 
     if (tutorSlots.length === 0) return [];
 
@@ -143,7 +157,7 @@ export const RescheduleModal = ({ booking, tutor, isOpen, onClose, onConfirm }) 
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {availableDates.map((date) => {
-                  const isAvailable = tutor.availabilitySlots?.some(
+                  const isAvailable = availabilitySlots?.some(
                     (slot) => slot.day === date.getDay()
                   );
                   const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();

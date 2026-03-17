@@ -10,11 +10,12 @@ import { motion, AnimatePresence } from "framer-motion";
  * Section pour afficher et gérer les matières enseignées.
  * Utilisé dans le profil public tutor.
  */
-export const SubjectsSection = ({ subjects = [], onChange }) => {
+export const SubjectsSection = ({ subjects = [], onChange, label }) => {
   const { t } = useTranslation();
   const [newSubject, setNewSubject] = useState("");
   const [showAddInput, setShowAddInput] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const sectionLabel = label ?? t("tutor.subjects", "Matières enseignées");
 
   const commonSubjects = [
     "Mathématiques",
@@ -51,7 +52,7 @@ export const SubjectsSection = ({ subjects = [], onChange }) => {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-dark/60 uppercase tracking-wider">
-            {t("tutor.subjects", "Matières enseignées")}
+            {sectionLabel}
           </label>
         </div>
         <div className="max-w-xs">

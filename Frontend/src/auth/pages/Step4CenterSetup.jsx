@@ -70,6 +70,7 @@ export default function Step4CenterSetup({ data, setData, onBack, onSubmit }) {
 
   const [centerName, setCenterName] = useState(data.centerName || "");
   const [description, setDescription] = useState(data.centerDescription || "");
+  const [centerCity, setCenterCity] = useState(data.centerCity || "");
   const [country, setCountry] = useState(data.centerCountry || "");
   const [logo, setLogo] = useState(data.centerLogo || null);
   const [requiredLanguages, setRequiredLanguages] = useState(data.centerRequiredLanguages || []);
@@ -96,6 +97,7 @@ export default function Step4CenterSetup({ data, setData, onBack, onSubmit }) {
     const centerData = {
       centerName: centerName.trim(),
       centerDescription: description.trim(),
+      centerCity: centerCity.trim(),
       centerCountry: country.trim(),
       centerLogo: logo,
       centerRequiredLanguages: requiredLanguages,
@@ -202,6 +204,18 @@ export default function Step4CenterSetup({ data, setData, onBack, onSubmit }) {
             </AnimatePresence>
           </div>
         </motion.div>
+
+        {/* Ville */}
+        <div>
+          <label className="block text-sm font-medium text-dark mb-1">{t("signup.city", "Ville")}</label>
+          <input
+            type="text"
+            value={centerCity}
+            onChange={(e) => setCenterCity(e.target.value)}
+            placeholder={t("signup.centerCityPlaceholder", "Ex. Yaoundé")}
+            className="w-full border border-black/20 rounded-lg px-4 py-2 text-sm outline-none focus:border-primary transition-colors"
+          />
+        </div>
 
         {/* Pays */}
         <div>

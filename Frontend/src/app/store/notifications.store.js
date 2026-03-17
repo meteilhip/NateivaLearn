@@ -67,4 +67,15 @@ export const useNotificationsStore = create((set, get) => ({
     }));
     return newNotification;
   },
+
+  removeNotification: async (notificationId) => {
+    try {
+      await notificationService.delete(notificationId);
+      set((state) => ({
+        notifications: state.notifications.filter((n) => n.id !== notificationId),
+      }));
+    } catch (e) {
+      throw e;
+    }
+  },
 }));

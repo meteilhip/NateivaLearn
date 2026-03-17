@@ -32,11 +32,11 @@ export const ChatWindow = ({ conversation, messages, onSendMessage }) => {
       {/* En-tête */}
       <div className="border-b border-gray-200 p-4 bg-white">
         <div className="flex items-center gap-3">
-          <img
-            src={conversation.avatar || "/placeholder-avatar.png"}
-            alt={conversation.name}
-            className="w-10 h-10 rounded-full object-cover"
-          />
+            <img
+              src={conversation.avatar || "/9581121.png"}
+              alt={conversation.name}
+              className="w-10 h-10 rounded-full object-cover"
+            />
           <div>
             <h3 className="font-medium text-dark">{conversation.name}</h3>
             {conversation.isOnline && (

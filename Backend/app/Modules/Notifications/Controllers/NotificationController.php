@@ -50,4 +50,11 @@ class NotificationController extends ApiController
             ->count();
         return $this->success(['count' => $count]);
     }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $n = Notification::query()->where('user_id', request()->user()->id)->findOrFail($id);
+        $n->delete();
+        return $this->success(['message' => 'Notification supprimée']);
+    }
 }

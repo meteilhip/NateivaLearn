@@ -15,11 +15,16 @@ import { Button } from "../ui/Button";
  */
 export const NotificationDropdown = () => {
   const { t } = useTranslation();
-  const { notifications, markAsRead, markAllAsRead, getUnreadCount } = useNotificationsStore();
+  const { notifications, fetchNotifications, markAsRead, markAllAsRead, removeNotification, getUnreadCount } = useNotificationsStore();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const unreadCount = getUnreadCount();
+
+  // Charger les notifications à l’ouverture (persistance après refresh)
+  useEffect(() => {
+    if (isOpen) fetchNotifications?.();
+  }, [isOpen, fetchNotifications]);
 
   // Fermer le dropdown quand on clique en dehors
   useEffect(() => {
@@ -103,6 +108,7 @@ export const NotificationDropdown = () => {
                     key={notification.id}
                     notification={notification}
                     onRead={handleNotificationClick}
+                    onDelete={removeNotification}
                   />
                 ))
               )}

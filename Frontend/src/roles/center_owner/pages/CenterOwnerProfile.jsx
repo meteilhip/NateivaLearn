@@ -351,7 +351,11 @@ export function CenterOwnerProfile() {
               placeholder={t("center_owner.orgDescription")}
             />
             <div className="py-4 border-b border-black/5">
-              <SubjectsSection subjects={centerSubjects} onChange={handleSaveCenterSubjects} />
+              <SubjectsSection
+                label={t("center_owner.subjectsTaughtInCenter", "Enseigné dans mon centre")}
+                subjects={centerSubjects}
+                onChange={handleSaveCenterSubjects}
+              />
             </div>
             <div className="py-4 border-b border-black/5">
               <LanguagesSection languages={centerLanguagesList} onChange={handleSaveCenterLanguages} />
@@ -384,6 +388,7 @@ export function CenterOwnerProfile() {
 
           <div className="py-4 border-b border-black/5">
             <SubjectsSection
+              label={t("tutor.subjectsTaught", "Matière enseigné")}
               subjects={subjects}
               onChange={(nextSubjects) => {
                 setSubjects(nextSubjects);

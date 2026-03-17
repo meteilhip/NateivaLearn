@@ -4,6 +4,7 @@ use App\Modules\Users\Controllers\UserController;
 use App\Modules\Users\Controllers\TutorController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/users', [UserController::class, 'index']);
 Route::get('/user/profile', [UserController::class, 'profile']);
 Route::put('/user/profile', [UserController::class, 'updateProfile']);
 Route::put('/user/active-organization/{organizationId}', [UserController::class, 'setActiveOrganization']);

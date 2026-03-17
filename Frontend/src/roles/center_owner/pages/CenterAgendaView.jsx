@@ -110,7 +110,7 @@ export const CenterAgendaView = () => {
               >
                 <div className="flex items-center gap-4">
                   <img
-                    src={booking.tutorAvatar || "/placeholder-avatar.png"}
+                    src={booking.tutorAvatar || "/9581121.png"}
                     alt={booking.tutorName}
                     className="w-12 h-12 rounded-full object-cover"
                   />

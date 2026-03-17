@@ -1,40 +1,9 @@
 // src/roles/center_owner/components/LearnerManagementList.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LearnerRequestCard } from "./LearnerRequestCard";
-
-/**
- * Mock data pour les demandes d'apprenants
- */
-const MOCK_LEARNER_REQUESTS = [
-  {
-    id: "lr1",
-    name: "Alice Martin",
-    email: "alice.martin@example.com",
-    avatar: "/placeholder-avatar.png",
-    level: "Intermédiaire",
-    subjects: ["Mathématiques", "Français"],
-  },
-  {
-    id: "lr2",
-    name: "Bob Dupont",
-    email: "bob.dupont@example.com",
-    avatar: "/placeholder-avatar.png",
-    level: "Débutant",
-    subjects: ["Anglais"],
-  },
-];
-
-const MOCK_LEARNER_MEMBERS = [
-  {
-    id: "lm1",
-    name: "Claire Bernard",
-    email: "claire.bernard@example.com",
-    avatar: "/placeholder-avatar.png",
-    level: "Avancé",
-    subjects: ["Mathématiques", "Physique"],
-  },
-];
+import { useActiveOrganization } from "../../../shared/hooks/useActiveOrganization";
+import { useOrganizationsStore } from "../../../app/store/organizations.store";
 
 /**
  * LearnerManagementList
@@ -44,29 +13,48 @@ const MOCK_LEARNER_MEMBERS = [
  */
 export const LearnerManagementList = () => {
   const { t } = useTranslation();
-  const [requests, setRequests] = useState(MOCK_LEARNER_REQUESTS);
-  const [members, setMembers] = useState(MOCK_LEARNER_MEMBERS);
+  const { activeOrganizationId } = useActiveOrganization();
+  const {
+    membershipRequests,
+    fetchMembershipRequests,
+    updateMembershipStatus,
+    fetchMembersForOrganization,
+  } = useOrganizationsStore();
 
-  const handleAccept = (learnerId) => {
-    // Simuler l'acceptation
-    const learner = requests.find((l) => l.id === learnerId);
-    if (learner) {
-      setRequests(requests.filter((l) => l.id !== learnerId));
-      setMembers([...members, learner]);
-      // TODO: Appel API pour accepter
-    }
+  const [members, setMembers] = useState([]);
+
+  useEffect(() => {
+    if (!activeOrganizationId) return;
+    fetchMembershipRequests(activeOrganizationId);
+    fetchMembersForOrganization(activeOrganizationId).then((result) => {
+      const learners = (result || []).filter((m) => m.role === "learner");
+      setMembers(
+        learners.map((m) => ({
+          id: m.id,
+          name: m.name ?? m.user?.name ?? "-",
+          email: m.email ?? m.user?.email ?? "-",
+          avatar: m.avatar ?? "/9581121.png",
+          level: m.level ?? "-",
+          subjects: m.subjects ?? [],
+        }))
+      );
+    });
+  }, [activeOrganizationId, fetchMembershipRequests, fetchMembersForOrganization]);
+
+  const requests = (membershipRequests || []).filter(
+    (r) => r.role === "learner" && r.status === "pending"
+  );
+
+  const handleAccept = (membershipId) => {
+    updateMembershipStatus(membershipId, "accepted");
   };
 
-  const handleReject = (learnerId) => {
-    // Simuler le refus
-    setRequests(requests.filter((l) => l.id !== learnerId));
-    // TODO: Appel API pour refuser
+  const handleReject = (membershipId) => {
+    updateMembershipStatus(membershipId, "rejected");
   };
 
-  const handleRemove = (learnerId) => {
-    // Simuler le retrait
-    setMembers(members.filter((l) => l.id !== learnerId));
-    // TODO: Appel API pour retirer
+  const handleRemove = (membershipId) => {
+    updateMembershipStatus(membershipId, "rejected");
   };
 
   return (

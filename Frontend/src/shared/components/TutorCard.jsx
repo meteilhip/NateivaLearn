@@ -12,7 +12,7 @@ import { TutorProfileModal } from "./TutorProfileModal";
  * - Gère sa propre modale profil
  * - Option : bouton "Réserver" (onBook) pour le flow réservation
  */
-export const TutorCard = ({ tutor, isSelected, onSelect, showPrice, showRating, onBook }) => {
+export const TutorCard = ({ tutor, isSelected, onSelect, showPrice, showRating, onBook, onMouseEnter, onMouseLeave }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -31,12 +31,14 @@ export const TutorCard = ({ tutor, isSelected, onSelect, showPrice, showRating, 
     <>
       <article
         onClick={onSelect}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
         className={`bg-white shadow-md rounded p-4 flex flex-col gap-3 cursor-pointer transition
         ${isSelected ? "border-2 border-primary" : "border border-black/10"}`}
       >
         <div className="flex gap-3">
           <img
-            src={tutor.avatar}
+            src={tutor.avatar || "/9581121.png"}
             alt={tutor.name}
             className="w-14 h-14 rounded-full object-cover"
           />

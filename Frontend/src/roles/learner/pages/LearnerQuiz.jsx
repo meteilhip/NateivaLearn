@@ -8,108 +8,42 @@ import { QuizCard } from "../../../shared/components/quiz/QuizCard";
 import { QuizPlayer } from "../../../shared/components/quiz/QuizPlayer";
 import { QuizResult } from "../../../shared/components/quiz/QuizResult";
 
-/**
- * Mock data pour les quiz
- */
+// Quiz système (IA) simulés côté frontend
 const MOCK_QUIZZES = [
   {
-    id: "q1",
-    title: "Quiz de Mathématiques - Niveau Débutant",
-    description: "Testez vos connaissances en mathématiques de base",
+    id: "sys-1",
+    title: "Quiz IA - Révisions générales",
+    description: "Quiz généré par l'IA pour réviser plusieurs matières.",
     type: "system",
-    questionsCount: 5,
+    questionsCount: 3,
     timeLimit: 10,
     completed: false,
     questions: [
       {
-        id: "q1-1",
-        question: "Quel est le résultat de 5 + 3 ?",
+        id: "sys-1-q1",
+        question: "Combien font 7 × 8 ?",
         answers: [
-          { id: "a1", text: "7", isCorrect: false },
-          { id: "a2", text: "8", isCorrect: true },
-          { id: "a3", text: "9", isCorrect: false },
-          { id: "a4", text: "10", isCorrect: false },
+          { id: "sys-1-q1-a1", text: "54", isCorrect: false },
+          { id: "sys-1-q1-a2", text: "56", isCorrect: true },
+          { id: "sys-1-q1-a3", text: "64", isCorrect: false },
         ],
       },
       {
-        id: "q1-2",
-        question: "Quel est le résultat de 10 × 2 ?",
+        id: "sys-1-q2",
+        question: "Quel est le synonyme de « rapide » ?",
         answers: [
-          { id: "a1", text: "18", isCorrect: false },
-          { id: "a2", text: "20", isCorrect: true },
-          { id: "a3", text: "22", isCorrect: false },
-          { id: "a4", text: "24", isCorrect: false },
+          { id: "sys-1-q2-a1", text: "Lent", isCorrect: false },
+          { id: "sys-1-q2-a2", text: "Vite", isCorrect: true },
+          { id: "sys-1-q2-a3", text: "Triste", isCorrect: false },
         ],
       },
       {
-        id: "q1-3",
-        question: "Quel est le résultat de 15 - 7 ?",
+        id: "sys-1-q3",
+        question: "La capitale du Cameroun est...",
         answers: [
-          { id: "a1", text: "6", isCorrect: false },
-          { id: "a2", text: "7", isCorrect: false },
-          { id: "a3", text: "8", isCorrect: true },
-          { id: "a4", text: "9", isCorrect: false },
-        ],
-      },
-      {
-        id: "q1-4",
-        question: "Quel est le résultat de 12 ÷ 3 ?",
-        answers: [
-          { id: "a1", text: "3", isCorrect: false },
-          { id: "a2", text: "4", isCorrect: true },
-          { id: "a3", text: "5", isCorrect: false },
-          { id: "a4", text: "6", isCorrect: false },
-        ],
-      },
-      {
-        id: "q1-5",
-        question: "Quel est le résultat de 6 × 4 ?",
-        answers: [
-          { id: "a1", text: "20", isCorrect: false },
-          { id: "a2", text: "22", isCorrect: false },
-          { id: "a3", text: "24", isCorrect: true },
-          { id: "a4", text: "26", isCorrect: false },
-        ],
-      },
-    ],
-  },
-  {
-    id: "q2",
-    title: "Quiz de Français - Grammaire",
-    description: "Quiz envoyé par votre tuteur pour réviser la grammaire",
-    type: "tutor",
-    tutorName: "Marie Dupont",
-    questionsCount: 3,
-    completed: false,
-    questions: [
-      {
-        id: "q2-1",
-        question: "Quel est le pluriel de 'cheval' ?",
-        answers: [
-          { id: "a1", text: "chevals", isCorrect: false },
-          { id: "a2", text: "chevaux", isCorrect: true },
-          { id: "a3", text: "chevales", isCorrect: false },
-          { id: "a4", text: "cheval", isCorrect: false },
-        ],
-      },
-      {
-        id: "q2-2",
-        question: "Quel est le féminin de 'acteur' ?",
-        answers: [
-          { id: "a1", text: "acteuse", isCorrect: false },
-          { id: "a2", text: "actrice", isCorrect: true },
-          { id: "a3", text: "acteure", isCorrect: false },
-          { id: "a4", text: "acteur", isCorrect: false },
-        ],
-      },
-      {
-        id: "q2-3",
-        question: "Quel est le participe passé de 'prendre' ?",
-        answers: [
-          { id: "a1", text: "pris", isCorrect: true },
-          { id: "a2", text: "prendu", isCorrect: false },
-          { id: "a3", text: "pris", isCorrect: true },
-          { id: "a4", text: "prend", isCorrect: false },
+          { id: "sys-1-q3-a1", text: "Douala", isCorrect: false },
+          { id: "sys-1-q3-a2", text: "Yaoundé", isCorrect: true },
+          { id: "sys-1-q3-a3", text: "Bafoussam", isCorrect: false },
         ],
       },
     ],
@@ -126,22 +60,29 @@ export const LearnerQuiz = () => {
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
   const learnerId = user?.id || user?.email || "learner-1";
-  const { getQuizzesForLearner } = useQuizStore();
-  
-  // Combiner les quiz système (mock) et les quiz envoyés par les tuteurs
-  const tutorQuizzesFromStore = useMemo(() => {
-    return getQuizzesForLearner(learnerId);
-  }, [learnerId, getQuizzesForLearner]);
-  
-  const allQuizzes = useMemo(() => {
-    return [...MOCK_QUIZZES, ...tutorQuizzesFromStore];
-  }, [tutorQuizzesFromStore]);
+  const { getQuizzesForLearner, fetchTutorQuizzes } = useQuizStore();
+
+  // Charger les quiz tuteurs depuis le backend
+  useEffect(() => {
+    fetchTutorQuizzes?.();
+  }, [fetchTutorQuizzes]);
+
+  // Quiz envoyés par les tuteurs pour ce learner
+  const tutorQuizzesFromStore = useMemo(
+    () => getQuizzesForLearner(learnerId),
+    [learnerId, getQuizzesForLearner]
+  );
+
+  const allQuizzes = useMemo(
+    () => [...MOCK_QUIZZES, ...tutorQuizzesFromStore],
+    [tutorQuizzesFromStore]
+  );
   
   const [quizzes, setQuizzes] = useState(allQuizzes);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [quizResult, setQuizResult] = useState(null);
 
-  // Mettre à jour les quiz quand tutorQuizzesFromStore change
+  // Mettre à jour les quiz quand la source change
   useEffect(() => {
     setQuizzes(allQuizzes);
   }, [allQuizzes]);
@@ -170,7 +111,6 @@ export const LearnerQuiz = () => {
     // Réinitialiser les réponses sélectionnées
   };
 
-  // Séparer les quiz système et tutor
   const systemQuizzes = quizzes.filter((q) => q.type === "system");
   const tutorQuizzes = quizzes.filter((q) => q.type === "tutor");
 
@@ -203,7 +143,7 @@ export const LearnerQuiz = () => {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-dark">{t("quiz.title", "Quiz")}</h1>
 
-      {/* Quiz système */}
+      {/* Quiz système (IA) */}
       {systemQuizzes.length > 0 && (
         <section>
           <h2 className="text-lg font-semibold text-dark mb-4">
@@ -217,7 +157,7 @@ export const LearnerQuiz = () => {
         </section>
       )}
 
-      {/* Quiz envoyés par tutor */}
+      {/* Quiz envoyés par les tuteurs */}
       {tutorQuizzes.length > 0 && (
         <section>
           <h2 className="text-lg font-semibold text-dark mb-4">

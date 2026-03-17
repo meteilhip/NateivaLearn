@@ -1,14 +1,14 @@
 // src/shared/components/NotificationItem.jsx
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { FaBook, FaComments, FaInfoCircle } from "react-icons/fa";
+import { FaBook, FaComments, FaInfoCircle, FaTimes } from "react-icons/fa";
 
 /**
  * NotificationItem
  * ----------------
- * Composant pour afficher une notification individuelle.
+ * Composant pour afficher une notification individuelle avec croix de suppression.
  */
-export const NotificationItem = ({ notification, onRead }) => {
+export const NotificationItem = ({ notification, onRead, onDelete }) => {
   const { t } = useTranslation();
 
   const getIcon = () => {
@@ -42,11 +42,25 @@ export const NotificationItem = ({ notification, onRead }) => {
       animate={{ opacity: 1, x: 0 }}
       onClick={() => !notification.read && onRead(notification.id)}
       className={`
-        p-4 border-b border-gray-200 cursor-pointer transition
+        p-4 pr-10 border-b border-gray-200 cursor-pointer transition relative
         ${notification.read ? "bg-white" : "bg-blue-50"}
         hover:bg-gray-50
       `}
     >
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(notification.id);
+          }}
+          className="absolute top-3 right-3 p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition"
+          title={t("notifications.delete", "Supprimer")}
+          aria-label={t("notifications.delete", "Supprimer")}
+        >
+          <FaTimes className="text-sm" />
+        </button>
+      )}
       <div className="flex items-start gap-3">
         <div className="mt-1">{getIcon()}</div>
         <div className="flex-1 min-w-0">

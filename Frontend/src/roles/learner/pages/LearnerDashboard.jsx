@@ -1,11 +1,9 @@
+import { useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import {
-  FaBook,
-  FaVideo,
-  FaCalendarAlt,
-  FaComments,
-} from "react-icons/fa";
+import { FaBook, FaVideo, FaCalendarAlt, FaComments } from "react-icons/fa";
 import { useAuthStore } from "../../../app/store/auth.store";
+import { useCoursesStore } from "../../../app/store/courses.store";
+import { useChatStore } from "../../../app/store/chat.store";
 
 /**
  * LearnerDashboard
@@ -17,20 +15,69 @@ import { useAuthStore } from "../../../app/store/auth.store";
  */
 export const LearnerDashboard = () => {
   const user = useAuthStore((state) => state.user);
+  const learnerId = user?.id || user?.email || null;
+  const { bookings, fetchBookings } = useCoursesStore();
+  const { conversations, fetchConversations } = useChatStore();
+
   const userName = user?.name || "";
 
+  useEffect(() => {
+    fetchBookings();
+    fetchConversations();
+  }, [fetchBookings, fetchConversations]);
+
+  const now = useMemo(() => new Date(), []);
+
+  const myBookings = useMemo(
+    () =>
+      bookings.filter(
+        (b) => learnerId && String(b.learnerId) === String(learnerId)
+      ),
+    [bookings, learnerId]
+  );
+
+  const completedCoursesCount = useMemo(
+    () => myBookings.filter((b) => b.status === "completed").length,
+    [myBookings]
+  );
+
+  const upcomingBookingsCount = useMemo(
+    () =>
+      myBookings.filter(
+        (b) =>
+          ["pending", "confirmed"].includes(b.status) &&
+          new Date(b.startTime) > now
+      ).length,
+    [myBookings, now]
+  );
+
+  const uniqueUpcomingDaysCount = useMemo(() => {
+    const days = new Set(
+      myBookings
+        .filter(
+          (b) =>
+            ["pending", "confirmed"].includes(b.status) &&
+            new Date(b.startTime) > now
+        )
+        .map((b) => (b.startTime || "").slice(0, 10))
+    );
+    return days.size;
+  }, [myBookings, now]);
+
+  const messagesCount = conversations.length;
+
   const stats = [
-    { label: "Cours suivis", value: 12, icon: FaBook },
-    { label: "Sessions visio", value: 5, icon: FaVideo },
-    { label: "Événements", value: 3, icon: FaCalendarAlt },
-    { label: "Messages", value: 2, icon: FaComments },
+    { label: "Cours suivis", value: completedCoursesCount, icon: FaBook },
+    { label: "Cours à venir", value: upcomingBookingsCount, icon: FaVideo },
+    { label: "Jours avec cours", value: uniqueUpcomingDaysCount, icon: FaCalendarAlt },
+    { label: "Conversations", value: messagesCount, icon: FaComments },
   ];
 
   const infoMessages = [
-    "📢 Nouveau cours disponible en Mathématiques",
-    "🎥 Session visio programmée demain à 18h",
-    "💬 2 nouveaux messages de vos enseignants",
-    "📅 N'oubliez pas votre événement cette semaine",
+    `📚 ${completedCoursesCount} cours déjà suivis`,
+    `📆 ${upcomingBookingsCount} réservation(s) à venir`,
+    `📅 ${uniqueUpcomingDaysCount} jour(s) avec des cours prévus`,
+    `💬 ${messagesCount} conversation(s) active(s)`,
   ];
 
   const marqueeText = infoMessages.join("   •   ");

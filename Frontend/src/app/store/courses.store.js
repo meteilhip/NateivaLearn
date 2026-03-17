@@ -19,7 +19,7 @@ function mapBooking(b) {
     learnerEmail: b.learner?.email ?? b.learner_email ?? b.learnerEmail,
     tutorId: b.tutor_id ?? b.tutorId,
     tutorName: b.tutor?.name,
-    tutorAvatar: null,
+    tutorAvatar: b.tutor?.avatar ?? b.tutor?.photo ?? null,
     subject: null,
     startTime: b.date && b.start_time ? `${b.date}T${b.start_time}` : b.start_time ?? b.startTime,
     endTime: b.date && b.end_time ? `${b.date}T${b.end_time}` : b.end_time ?? b.endTime,
@@ -35,7 +35,7 @@ function mapTutor(t) {
   return {
     id: t.id,
     name: t.name,
-    avatar: null,
+    avatar: t.avatar ?? t.photo ?? null,
     bio: p.bio,
     subjects: p.subjects ?? [],
     languages: p.languages ?? [],
@@ -43,7 +43,7 @@ function mapTutor(t) {
     pricePerHour: p.hourly_rate ?? p.hourlyRate,
     rating: p.rating ?? 0,
     studentsCount: 0,
-    videoUrl: null,
+    videoUrl: p.video_url ?? t.video_url ?? null,
     availabilitySlots: [],
   };
 }
@@ -55,6 +55,7 @@ export const useCoursesStore = create((set, get) => ({
   weeklyAvailability: [],
   blockedDates: [],
   bookings: [],
+  availabilityByTutorId: {},
 
   fetchTutors: async (filters = {}) => {
     try {
@@ -103,21 +104,57 @@ export const useCoursesStore = create((set, get) => ({
     }
   },
 
+  fetchAvailabilityForTutor: async (tutorId) => {
+    if (!tutorId) return [];
+    try {
+      const data = await availabilityService.byTutor(tutorId);
+      const slots = (data.slots ?? []).map((s) => ({
+        day: s.day_of_week ?? s.day,
+        start: timeToMinutes(s.start_time ?? s.startTime),
+        end: timeToMinutes(s.end_time ?? s.endTime),
+      }));
+      set((state) => ({
+        availabilityByTutorId: {
+          ...state.availabilityByTutorId,
+          [tutorId]: slots,
+        },
+      }));
+      return slots;
+    } catch {
+      set((state) => ({
+        availabilityByTutorId: {
+          ...state.availabilityByTutorId,
+          [tutorId]: [],
+        },
+      }));
+      return [];
+    }
+  },
+
   createBooking: async (payload) => {
     try {
+      const date = payload.date ?? (payload.startTime?.slice ? payload.startTime.slice(0, 10) : null);
+      const startTime = typeof payload.startTime === "string" && payload.startTime.length === 5 && payload.startTime.includes(":")
+        ? payload.startTime
+        : (payload.startTime?.slice ? payload.startTime.slice(11, 16) : payload.startTime);
+      const endTime = typeof payload.endTime === "string" && payload.endTime.length === 5 && payload.endTime.includes(":")
+        ? payload.endTime
+        : (payload.endTime?.slice ? payload.endTime.slice(11, 16) : payload.endTime);
       const data = await bookingService.create({
         tutorId: payload.tutorId,
         organizationId: payload.organizationId,
-        date: payload.date ?? payload.startTime?.slice(0, 10),
-        startTime: payload.startTime?.slice(11, 19) ?? payload.startTime,
-        endTime: payload.endTime?.slice(11, 19) ?? payload.endTime,
+        date,
+        startTime,
+        endTime,
         price: payload.price,
       });
       set((state) => ({ bookings: [mapBooking(data), ...state.bookings] }));
       return mapBooking(data);
     } catch (err) {
-      const msg = err?.data?.message || err?.message;
-      return { error: msg };
+      const data = err?.data;
+      const msg = data?.message || err?.message;
+      const errors = data?.errors;
+      return { error: msg, errors };
     }
   },
 

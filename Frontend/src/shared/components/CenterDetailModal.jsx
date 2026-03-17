@@ -4,8 +4,10 @@ import { Button } from "../ui/Button";
 import { FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 import { useAuthStore } from "../../app/store/auth.store";
 import { useOrganizationsStore } from "../../app/store/organizations.store";
+import { useNotificationsStore } from "../../app/store/notifications.store";
 import { ROLES } from "../utils/roles";
 import { CenterTutorsInline } from "./center/CenterTutorsInline";
 import { StarRating } from "../ui/StarRating";
@@ -19,16 +21,27 @@ import { StarRating } from "../ui/StarRating";
 export const CenterDetailModal = ({ center, isOpen, onClose, onJoinCenter }) => {
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
-  const { organizations, requestMembership, hasPendingRequest, getMembershipRole } = useOrganizationsStore();
+  const { organizations, requestMembership, hasPendingRequest, getMembershipRole, fetchMembershipRequests } = useOrganizationsStore();
+  const fetchNotifications = useNotificationsStore((s) => s.fetchNotifications);
   const [showTeachers, setShowTeachers] = useState(false);
-  
-  // Vérifier si l'utilisateur est un tuteur
+  const [joinRequestSent, setJoinRequestSent] = useState(false);
+
   const isTutor = user?.role === ROLES.Tutor;
-  
-  // Trouver l'organisation correspondante au centre (par nom)
+  const isLearner = user?.role === ROLES.Learner;
+
+  // Organisation : par id (centre discover) ou par nom
   const organization = useMemo(() => {
-    if (!center || !organizations) return null;
-    return organizations.find((org) => org.name === center.name) || null;
+    if (!center) return null;
+    if (center.id && organizations?.length) {
+      const byId = organizations.find((o) => String(o.id) === String(center.id));
+      if (byId) return byId;
+    }
+    if (organizations?.length) {
+      const byName = organizations.find((o) => o.name === center.name);
+      if (byName) return byName;
+    }
+    if (center.id) return { id: center.id, name: center.name };
+    return null;
   }, [center, organizations]);
   
   // Vérifier si le tuteur a déjà un centre
@@ -41,38 +54,35 @@ export const CenterDetailModal = ({ center, isOpen, onClose, onJoinCenter }) => 
     });
   }, [isTutor, user, organizations, getMembershipRole]);
   
-  // Vérifier si le tuteur a déjà une demande en attente pour ce centre
   const { membershipRequests } = useOrganizationsStore();
   const hasPendingRequestForCenter = useMemo(() => {
-    if (!isTutor || !user || !organization) return false;
+    if (!user || !organization) return false;
     const userId = user.id || user.email;
     return hasPendingRequest(userId, organization.id);
-  }, [isTutor, user, organization, hasPendingRequest, membershipRequests]);
-  
-  // Vérifier si le tuteur est déjà membre de ce centre
-  const isAlreadyMember = useMemo(() => {
+  }, [user, organization, hasPendingRequest, membershipRequests]);
+
+  const isAlreadyMemberTutor = useMemo(() => {
     if (!isTutor || !user || !organization) return false;
     const userId = user.id || user.email;
     const role = getMembershipRole(userId, organization.id);
     return role === "tutor" || role === "owner";
   }, [isTutor, user, organization, getMembershipRole]);
-  
-  const handleJoinCenter = () => {
+
+  const handleJoinCenter = async (role) => {
     if (!organization || !user) return;
     const userId = user.id || user.email;
-    const result = requestMembership({
+    const result = await requestMembership({
       userId,
       organizationId: organization.id,
-      role: "tutor",
+      role: role || (isTutor ? "tutor" : "learner"),
     });
-    
     if (result?.error) {
-      alert(result.error);
+      toast.error(result.error);
     } else {
-      alert(t("tutor.joinRequestSent", "Demande envoyée avec succès ! Le propriétaire du centre examinera votre demande."));
-      if (onJoinCenter) {
-        onJoinCenter(organization);
-      }
+      setJoinRequestSent(true);
+      fetchNotifications?.();
+      toast.success(t("tutor.joinRequestSent", "Demande envoyée. Le centre examinera votre demande."));
+      if (onJoinCenter) onJoinCenter(organization);
     }
   };
 
@@ -146,12 +156,12 @@ export const CenterDetailModal = ({ center, isOpen, onClose, onJoinCenter }) => 
                 <FiX size={24} />
               </button>
 
-              {/* Image */}
+              {/* Logo / image du centre (logo base64 prioritaire) */}
               <div className="md:w-64 flex-shrink-0">
                 <img
-                  src={center.image}
+                  src={center.logo || center.image || "/placeholder-center.jpg"}
                   alt={center.name}
-                  className="w-full h-48 md:h-full object-cover rounded-lg"
+                  className="w-full h-48 md:h-full object-cover rounded-lg min-h-[12rem]"
                 />
               </div>
 
@@ -172,11 +182,12 @@ export const CenterDetailModal = ({ center, isOpen, onClose, onJoinCenter }) => 
                 </div>
                 
                 <p className="text-gray-600 mt-2">
-                  {center.address}, {center.city}
+                  {[center.address, center.city, center.country].filter(Boolean).join(", ") || "-"}
                 </p>
 
                 <p className="text-gray-600 mt-1">
-                  {center.contactPhone || t("center.noPhone")}
+                  <span className="font-medium text-gray-700">{t("center.ownerPhoneLabel", "Téléphone du propriétaire")} : </span>
+                  {center.owner?.phone || center.contactPhone || t("center.noPhone", "Non renseigné")}
                 </p>
 
                 {/* 🔁 ZONE DYNAMIQUE */}
@@ -264,17 +275,30 @@ export const CenterDetailModal = ({ center, isOpen, onClose, onJoinCenter }) => 
                       : t("center.seeTeachers")}
                   </Button>
                   
-                  {/* Bouton "Rejoindre le centre" pour les tuteurs */}
-                  {isTutor && organization && !tutorHasCenter && !isAlreadyMember && (
+                  {/* Bouton "Rejoindre le centre" pour tuteurs */}
+                  {isTutor && organization && !tutorHasCenter && !isAlreadyMemberTutor && (
                     <Button
                       variant="primary"
                       className="rounded"
-                      onClick={handleJoinCenter}
-                      disabled={hasPendingRequestForCenter}
+                      onClick={() => handleJoinCenter("tutor")}
+                      disabled={hasPendingRequestForCenter || joinRequestSent}
                     >
-                      {hasPendingRequestForCenter
+                      {hasPendingRequestForCenter || joinRequestSent
                         ? t("tutor.requestPending", "Demande en attente")
                         : t("tutor.joinCenter", "Rejoindre le centre")}
+                    </Button>
+                  )}
+                  {/* Bouton "Rejoindre le centre" pour learners */}
+                  {isLearner && organization && (
+                    <Button
+                      variant="primary"
+                      className="rounded"
+                      onClick={() => handleJoinCenter("learner")}
+                      disabled={hasPendingRequestForCenter || joinRequestSent}
+                    >
+                      {hasPendingRequestForCenter || joinRequestSent
+                        ? t("tutor.requestPending", "Demande en attente")
+                        : t("center.joinCenter", "Rejoindre ce centre")}
                     </Button>
                   )}
                 </div>

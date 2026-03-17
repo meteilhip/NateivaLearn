@@ -26,7 +26,7 @@ class TutorController extends ApiController
             'name' => $u->name,
             'email' => $u->email,
             'city' => $u->city,
-            'tutor_profile' => $u->tutorProfile?->only(['bio', 'hourly_rate', 'languages', 'subjects', 'rating']),
+            'tutor_profile' => $u->tutorProfile?->only(['bio', 'hourly_rate', 'languages', 'subjects', 'rating', 'video_url']),
         ]);
         return $this->success($tutors);
     }

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "../../ui/Button";
+import { quizService } from "../../../services";
 
 /**
  * QuizPlayer
@@ -58,8 +59,8 @@ export const QuizPlayer = ({ quiz, onComplete, onClose }) => {
     }
   };
 
-  const handleSubmit = () => {
-    // Calculer le score
+  const handleSubmit = async () => {
+    // Calculer le score côté frontend
     let correctAnswers = 0;
     quiz.questions.forEach((question) => {
       const selectedAnswerId = selectedAnswers[question.id];
@@ -69,15 +70,41 @@ export const QuizPlayer = ({ quiz, onComplete, onClose }) => {
       }
     });
 
-    const score = Math.round((correctAnswers / quiz.questions.length) * 100);
+    const localScore = Math.round((correctAnswers / quiz.questions.length) * 100);
 
-    onComplete({
+    // Préparer la payload pour le backend
+    const answersPayload = Object.entries(selectedAnswers).map(
+      ([questionId, answerId]) => ({
+        question_id: questionId,
+        answer_id: answerId,
+      })
+    );
+
+    let finalResult = {
       quizId: quiz.id,
-      score,
+      score: localScore,
       correctAnswers,
       totalQuestions: quiz.questions.length,
       answers: selectedAnswers,
-    });
+    };
+
+    try {
+      const data = await quizService.submit(quiz.id, answersPayload);
+      if (data) {
+        finalResult = {
+          quizId: quiz.id,
+          score: data.score ?? localScore,
+          correctAnswers: data.correct_answers ?? correctAnswers,
+          totalQuestions: data.total_questions ?? quiz.questions.length,
+          answers: selectedAnswers,
+          raw: data,
+        };
+      }
+    } catch {
+      // En cas d'erreur backend, on reste sur le calcul local
+    }
+
+    onComplete(finalResult);
   };
 
   const formatTime = (seconds) => {

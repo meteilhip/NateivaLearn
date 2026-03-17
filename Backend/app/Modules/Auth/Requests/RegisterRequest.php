@@ -20,6 +20,7 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:50'],
             'city' => ['nullable', 'string', 'max:100'],
+            'country' => ['nullable', 'string', 'max:100'],
             'password' => ['required', 'string', 'confirmed', Password::defaults()],
             'role' => ['required', 'string', Rule::in(['learner', 'tutor', 'center_owner'])],
             // Champs optionnels pour le profil tuteur (remplis uniquement si role = tutor)

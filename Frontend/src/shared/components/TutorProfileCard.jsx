@@ -18,7 +18,7 @@ export const TutorProfileCard = ({ tutor, showPrice, showRating, onBook, onJoinC
     <aside className="bg-white rounded-lg shadow-lg p-6 w-full md:w-80">
       <div className="flex flex-col items-center gap-4">
         <img
-          src={tutor.avatar || "/placeholder-avatar.png"}
+          src={tutor.avatar || "/9581121.png"}
           alt={tutor.name}
           className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover shadow-sm"
         />

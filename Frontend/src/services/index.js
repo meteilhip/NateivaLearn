@@ -7,3 +7,4 @@ export { quizService } from "./quiz.service";
 export { chatService } from "./chat.service";
 export { notificationService } from "./notification.service";
 export { tutorService } from "./tutor.service";
+export { libraryService } from "./library.service";

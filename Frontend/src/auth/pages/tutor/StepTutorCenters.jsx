@@ -1,25 +1,38 @@
+import { useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../shared/ui/Button";
-import centers from "../../../data/centers";
 import { CenterCard } from "../../../shared/components/CenterCard";
 import { HiOutlineOfficeBuilding } from "react-icons/hi";
 import { toast } from "react-toastify";
+import { useOrganizationsStore } from "../../../app/store/organizations.store";
 
 /** StepTutorCenters – Étape optionnelle : proposer des centres en fonction des matières enseignées */
 export default function StepTutorCenters({ data, setData, onNext, onBack, onSkip }) {
   const { t } = useTranslation();
+  const { organizations, fetchOrganizations } = useOrganizationsStore();
+
+  // Charger les centres réels depuis l'API
+  useEffect(() => {
+    fetchOrganizations?.();
+  }, [fetchOrganizations]);
 
   const tutorSubjects = (data.tutorSubjects ?? []).map((s) => s.toLowerCase());
 
-  const filteredCenters =
-    tutorSubjects.length === 0
-      ? centers
-      : centers.filter((center) =>
-          (center.subjects || []).some((subject) =>
-            tutorSubjects.includes(subject.name.toLowerCase())
-          )
-        );
+  const centers = useMemo(() => organizations || [], [organizations]);
+
+  const filteredCenters = useMemo(() => {
+    if (!Array.isArray(centers) || centers.length === 0) return [];
+    if (tutorSubjects.length === 0) return centers;
+
+    return centers.filter((center) => {
+      const centerSubjects = (center.subjects || []).map((subject) => {
+        if (typeof subject === "string") return subject.toLowerCase();
+        return (subject.name ?? "").toLowerCase();
+      });
+      return centerSubjects.some((name) => tutorSubjects.includes(name));
+    });
+  }, [centers, tutorSubjects]);
 
   const handleSelectCenter = (center) => {
     setData((prev) => ({

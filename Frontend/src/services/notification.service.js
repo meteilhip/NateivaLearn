@@ -26,6 +26,10 @@ export const notificationService = {
     const { data } = await api(`${PREFIX}/unread-count`);
     return data?.count ?? 0;
   },
+
+  async delete(id) {
+    await api(`${PREFIX}/${id}`, { method: "DELETE" });
+  },
 };
 
 export default notificationService;

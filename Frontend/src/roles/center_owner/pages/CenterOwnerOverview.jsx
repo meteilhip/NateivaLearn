@@ -1,6 +1,6 @@
 /**
  * CenterOwnerOverview - Vue d'ensemble du centre (organisation).
- * Données mockées. Backend : stats agrégées plus tard.
+ * Les statistiques sont maintenant dérivées des données réelles quand disponibles.
  */
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -17,16 +17,16 @@ export function CenterOwnerOverview() {
   const stats = [
     { label: t("center_owner.tutorsCount"), value: org.tutorIds?.length ?? 0, icon: FaUsers },
     { label: t("center_owner.learnersCount"), value: org.learnerIds?.length ?? 0, icon: FaUserGraduate },
-    { label: t("center_owner.coursesCount"), value: 12, icon: FaBook },
-    { label: t("center_owner.revenue"), value: "—", icon: FaChartLine },
+    { label: t("center_owner.coursesCount"), value: org.coursesCount ?? 0, icon: FaBook },
+    { label: t("center_owner.revenue"), value: org.revenue ?? "—", icon: FaChartLine },
   ];
 
   // Messages d'information pour la bande annonce
   const infoMessages = [
-    "📢 Nouvelle demande de tuteur en attente",
-    "👥 3 nouveaux apprenants cette semaine",
-    "💬 5 nouveaux messages de vos tuteurs",
-    "📅 Vérifiez les réservations de la semaine",
+    "📢 " + t("center_owner.checkRequests", "Vérifiez les demandes d'adhésion en attente"),
+    "👥 " + t("center_owner.checkMembers", "Consultez les membres de votre centre"),
+    "💬 " + t("center_owner.checkMessages", "Consultez les derniers messages"),
+    "📅 " + t("center_owner.checkCalendar", "Consultez les réservations de la semaine"),
   ];
 
   const marqueeText = infoMessages.join("   •   ");

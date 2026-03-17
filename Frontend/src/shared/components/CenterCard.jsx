@@ -17,10 +17,10 @@ export const CenterCard = ({ center }) => {
   return (
     <>
       <article className="bg-white shadow-md rounded overflow-hidden flex flex-col">
-        {/* Image du centre */}
-        <div className="h-40">
+        {/* Logo / image du centre (logo base64 prioritaire) */}
+        <div className="h-40 bg-black/5">
           <img
-            src={center.image || "/placeholder-center.jpg"}
+            src={center.logo || center.image || "/placeholder-center.jpg"}
             alt={center.name}
             className="w-full h-full object-cover"
             loading="lazy"
@@ -36,7 +36,7 @@ export const CenterCard = ({ center }) => {
 
             {/* Adresse */}
             <p className="text-sm text-gray-600">
-              {center.address}, {center.city}
+              {[center.address, center.city, center.country].filter(Boolean).join(", ") || "-"}
             </p>
           </div>
 

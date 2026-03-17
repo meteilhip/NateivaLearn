@@ -11,10 +11,12 @@ import {
   FaBell,
   FaKeyboard,
   FaGlobe,
+  FaBook,
 } from "react-icons/fa";
 
 const SETTINGS_SECTIONS = [
   { key: "general", icon: FaCog },
+  { key: "library", icon: FaBook, path: "/learner/library" },
   { key: "privacy", icon: FaLock },
   { key: "theme", icon: FaPalette },
   { key: "videoAudio", icon: FaVideo },
@@ -55,7 +57,7 @@ export const LearnerSettings = () => {
           <button
             key={section.key}
             type="button"
-            onClick={() => section.path && navigate(section.path)}
+            onClick={() => section.path ? navigate(section.path) : undefined}
             className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-black/5 transition"
           >
             <section.icon className="text-primary w-5 h-5 flex-shrink-0" />

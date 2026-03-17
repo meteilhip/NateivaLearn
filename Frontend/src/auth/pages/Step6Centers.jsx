@@ -1,9 +1,10 @@
 // src/auth/pages/Step6Centers.jsx
+import { useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import centers from "../../data/centers";
 import { CenterCard } from "../../shared/components/CenterCard";
 import { Button } from "../../shared/ui/Button";
+import { useOrganizationsStore } from "../../app/store/organizations.store";
 
 // Icône centre / établissement
 import { HiOutlineOfficeBuilding } from "react-icons/hi";
@@ -19,13 +20,30 @@ import { HiOutlineOfficeBuilding } from "react-icons/hi";
  */
 export default function Step6Centers({ data, setData, onNext, onBack, onSkip }) {
   const { t } = useTranslation();
+  const { organizations, fetchOrganizations } = useOrganizationsStore();
+
+  // Charger les centres réels depuis l'API
+  useEffect(() => {
+    fetchOrganizations?.();
+  }, [fetchOrganizations]);
+
+  const centers = useMemo(() => organizations || [], [organizations]);
 
   /**
    * Centres compatibles avec les matières sélectionnées
    */
-  const compatibleCenters = centers.filter((center) =>
-    center.subjects.some((s) => data.subjects.includes(s.name))
-  );
+  const compatibleCenters = useMemo(() => {
+    if (!Array.isArray(centers) || centers.length === 0) return [];
+    const selectedSubjects = data.subjects || [];
+    if (selectedSubjects.length === 0) return centers;
+
+    return centers.filter((center) => {
+      const centerSubjects = (center.subjects || []).map((s) =>
+        typeof s === "string" ? s : s.name ?? ""
+      );
+      return centerSubjects.some((name) => selectedSubjects.includes(name));
+    });
+  }, [centers, data.subjects]);
 
   return (
     <motion.div

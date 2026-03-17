@@ -19,6 +19,7 @@ function mapRequest(r) {
 export const useOrganizationsStore = create((set, get) => ({
   organizations: [],
   membershipRequests: [],
+  membersByOrganizationId: {},
 
   fetchOrganizations: async () => {
     try {
@@ -31,12 +32,23 @@ export const useOrganizationsStore = create((set, get) => ({
     }
   },
 
+  discoverOrganizations: async (filters = {}) => {
+    try {
+      const data = await organizationService.discover(filters);
+      const list = (data ?? []).map(mapOrg);
+      return list;
+    } catch {
+      return [];
+    }
+  },
+
   createOrganization: async (payload) => {
-    const { name, description, logo, country, languages, ownerId, subjects } = payload;
+    const { name, description, logo, city, country, languages, ownerId, subjects } = payload;
     try {
       const org = await organizationService.create({
         name: name || "Mon centre",
-        city: country,
+        city: city ?? null,
+        country: country ?? null,
         description: description || "",
         logo: logo ?? null,
         required_languages: Array.isArray(languages) ? languages : null,
@@ -55,6 +67,7 @@ export const useOrganizationsStore = create((set, get) => ({
       const updated = await organizationService.update(organizationId, {
         name: payload.name,
         city: payload.city,
+        country: payload.country,
         description: payload.description,
         logo: payload.logo,
         required_languages: payload.required_languages ?? payload.requiredLanguages,
@@ -126,5 +139,33 @@ export const useOrganizationsStore = create((set, get) => ({
         String(r.organizationId ?? r.organization_id) === String(organizationId) &&
         r.status === "pending"
     );
+  },
+
+  fetchMembersForOrganization: async (organizationId) => {
+    try {
+      const data = await organizationService.getMembers(organizationId);
+      const members = data ?? [];
+      set((state) => ({
+        membersByOrganizationId: {
+          ...state.membersByOrganizationId,
+          [organizationId]: members,
+        },
+      }));
+      return members;
+    } catch {
+      return [];
+    }
+  },
+
+  getMembersForOrganization: (organizationId) => {
+    return get().membersByOrganizationId[organizationId] ?? [];
+  },
+
+  getMembershipRole: (userId, organizationId) => {
+    const members = get().membersByOrganizationId[organizationId] ?? [];
+    const member = members.find(
+      (m) => String(m.user_id ?? m.userId ?? m.id) === String(userId)
+    );
+    return member?.role ?? null;
   },
 }));

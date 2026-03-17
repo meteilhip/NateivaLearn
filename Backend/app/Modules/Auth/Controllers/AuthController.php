@@ -34,6 +34,7 @@ class AuthController extends ApiController
             'email' => $request->validated('email'),
             'phone' => $request->validated('phone'),
             'city' => $request->validated('city'),
+            'country' => $request->validated('country'),
             'password' => $request->validated('password'),
             'role' => $request->validated('role'),
         ]);
@@ -106,12 +107,14 @@ class AuthController extends ApiController
             'email' => $user->email,
             'phone' => $user->phone,
             'city' => $user->city,
+            'country' => $user->country,
             'role' => $user->role,
             'active_organization_id' => $user->active_organization_id,
             'activeOrganization' => $activeOrg ? [
                 'id' => $activeOrg->id,
                 'name' => $activeOrg->name ?? null,
                 'city' => $activeOrg->city ?? null,
+                'country' => $activeOrg->country ?? null,
             ] : null,
             'tutorProfile' => $tutorProfile ? [
                 'id' => $tutorProfile->id,

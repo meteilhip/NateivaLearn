@@ -49,6 +49,7 @@ export default function SignupMultiStep() {
     name: "",
     email: "",
     city: "",
+    country: "",
     phone: "",
     password: "",
     confirmPassword: "",
@@ -70,6 +71,7 @@ export default function SignupMultiStep() {
     centerName: "",
     centerDescription: "",
     centerLogo: null,
+    centerCity: "",
     centerCountry: "",
     centerLanguages: [],
     centerRequiredLanguages: [],
@@ -103,8 +105,8 @@ export default function SignupMultiStep() {
       }
     }
 
-    // Étape 1 : ville + téléphone
-    if (step === 1 && (!data.city || !data.phone)) {
+    // Étape 1 : localisation (ville, pays) + téléphone
+    if (step === 1 && (!data.city || !data.country || !data.phone)) {
       return toast.error(t("signup.errorEmpty"));
     }
 
@@ -226,6 +228,7 @@ export default function SignupMultiStep() {
       name: centerData.centerName || data.centerName,
       description: centerData.centerDescription ?? data.centerDescription,
       logo: centerData.centerLogo ?? data.centerLogo,
+      city: centerData.centerCity ?? data.centerCity,
       country: centerData.centerCountry ?? data.centerCountry,
       languages: centerData.centerRequiredLanguages ?? data.centerRequiredLanguages ?? data.centerLanguages ?? [],
       subjects: centerData.centerSubjects ?? data.centerSubjects ?? [],

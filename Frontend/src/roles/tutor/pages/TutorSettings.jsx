@@ -11,10 +11,12 @@ import {
   FaBell,
   FaKeyboard,
   FaGlobe,
+  FaBook,
 } from "react-icons/fa";
 
 const SETTINGS_SECTIONS = [
   { key: "general", icon: FaCog },
+  { key: "library", icon: FaBook, path: "/tutor/library" },
   { key: "privacy", icon: FaLock },
   { key: "theme", icon: FaPalette },
   { key: "videoAudio", icon: FaVideo },

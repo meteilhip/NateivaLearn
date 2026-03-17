@@ -6,28 +6,24 @@ import { useOrganizationsStore } from "../../app/store/organizations.store";
 /**
  * useLearnerCenter
  * ----------------
- * Hook pour vérifier si un learner a rejoint un centre.
- * Retourne le centre du learner s'il en a un, sinon null.
+ * Version branchée sur les données réelles :
+ * - utilise l'organization active de l'utilisateur (activeOrganizationId)
+ * - retourne l'organisation correspondante si elle est connue côté frontend.
  */
 export const useLearnerCenter = () => {
   const user = useAuthStore((state) => state.user);
-  const { organizations, memberships } = useOrganizationsStore();
+  const { organizations } = useOrganizationsStore();
 
   const learnerCenter = useMemo(() => {
     if (!user) return null;
-    
-    // Chercher un membership "learner" pour cet utilisateur
-    const learnerMembership = (memberships || []).find(
-      (m) => m.userId === (user.id || user.email) && m.role === "learner"
+    const activeOrgId = user.activeOrganizationId ?? user.active_organization_id;
+    if (!activeOrgId) return null;
+    return (
+      (organizations || []).find(
+        (org) => String(org.id) === String(activeOrgId)
+      ) || null
     );
-
-    if (!learnerMembership) return null;
-
-    // Retourner l'organisation correspondante
-    return (organizations || []).find(
-      (org) => org.id === learnerMembership.organizationId
-    ) || null;
-  }, [user, organizations, memberships]);
+  }, [user, organizations]);
 
   return {
     hasCenter: !!learnerCenter,

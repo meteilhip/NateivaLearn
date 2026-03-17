@@ -2,10 +2,11 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../../app/store/auth.store";
-import { FaUser, FaCog, FaLock, FaPalette, FaVideo, FaBell, FaKeyboard, FaGlobe } from "react-icons/fa";
+import { FaUser, FaCog, FaLock, FaPalette, FaVideo, FaBell, FaKeyboard, FaGlobe, FaBook } from "react-icons/fa";
 
 const SECTIONS = [
   { key: "general", icon: FaCog },
+  { key: "library", icon: FaBook, path: "/center_owner/library" },
   { key: "privacy", icon: FaLock },
   { key: "theme", icon: FaPalette },
   { key: "videoAudio", icon: FaVideo },

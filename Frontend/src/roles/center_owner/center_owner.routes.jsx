@@ -7,6 +7,7 @@ import { CenterOwnerOverview } from "./pages/CenterOwnerOverview";
 import { CenterOwnerCenter } from "./pages/CenterOwnerCenter";
 import { CenterOwnerSettings } from "./pages/CenterOwnerSettings";
 import { CenterOwnerProfile } from "./pages/CenterOwnerProfile";
+import { LibraryPage } from "../../shared/pages/LibraryPage";
 import { CenterOwnerChat } from "./pages/CenterOwnerChat";
 import { CenterAgendaView } from "./pages/CenterAgendaView";
 import { VideoCallLayout } from "./pages/VideoCallLayout";
@@ -33,6 +34,7 @@ export const CenterOwnerRoutes = () => (
       <Route path="agenda" element={<CenterAgendaView />} />
       <Route path="video" element={<VideoCallLayout />} />
       <Route path="settings" element={<CenterOwnerSettings />} />
+      <Route path="library" element={<LibraryPage />} />
       <Route path="profile" element={<CenterOwnerProfile />} />
       <Route path="courses" element={<TutorBookings />} />
     </Route>

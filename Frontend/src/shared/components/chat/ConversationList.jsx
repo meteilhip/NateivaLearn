@@ -42,11 +42,11 @@ export const ConversationList = ({ conversations, selectedConversationId, onSele
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <img
-                      src={conversation.avatar || "/placeholder-avatar.png"}
-                      alt={conversation.name}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
+                  <img
+                    src={conversation.avatar || "/9581121.png"}
+                    alt={conversation.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
                     <div>
                       <h3 className="font-medium text-dark">{conversation.name}</h3>
                       {conversation.isOnline && (
